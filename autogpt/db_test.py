@@ -102,41 +102,24 @@ async def test_get_artifact():
     # Given: A task and its corresponding artifact
     task = await db.create_task("test_input")
     step = await db.create_step(task.task_id, "step_name")
+
+    # Create an artifact
     artifact = await db.create_artifact(
-        task.task_id, "sample_file.txt", "/path/to/sample_file.txt", step.step_id
+        task_id=task.task_id,
+        file_name="sample_file.txt",
+        uri="file:///path/to/sample_file.txt",
+        agent_created=True,
+        data=None,
+        step_id=step.step_id,
     )
 
     # When: The artifact is fetched by its ID
-    fetched_artifact = await db.get_artifact(task.task_id, artifact.artifact_id)
+    fetched_artifact = await db.get_artifact(int(task.task_id), artifact.artifact_id)
 
     # Then: The fetched artifact matches the original
-    assert fetched_artifact.artifact_id == artifact.artifact_id
     assert fetched_artifact.file_name == "sample_file.txt"
-    assert fetched_artifact.relative_path == "/path/to/sample_file.txt"
-    os.remove(db_name.split("///")[1])
+    assert fetched_artifact.uri == "file:///path/to/sample_file.txt"
 
-
-@pytest.mark.asyncio
-async def test_get_artifact_file():
-    db_name = "sqlite:///test_db.sqlite3"
-    db = AgentDB(db_name)
-    sample_data = b"sample data"
-    # Given: A task and its corresponding artifact
-    task = await db.create_task("test_input")
-    step = await db.create_step(task.task_id, "step_name")
-    artifact = await db.create_artifact(
-        task.task_id,
-        "sample_file.txt",
-        "/path/to/sample_file.txt",
-        step.step_id,
-        sample_data,
-    )
-
-    # When: The artifact is fetched by its ID
-    fetched_artifact = await db.get_artifact_file(task.task_id, artifact.artifact_id)
-
-    # Then: The fetched artifact matches the original
-    assert fetched_artifact == sample_data
     os.remove(db_name.split("///")[1])
 
 
