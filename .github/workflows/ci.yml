@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  workflow_dispatch:
+    branches: [master]
+  schedule:
+    - cron: '0 8 * * *'
+  push:
+    branches: [master, ci-test*]
+  pull_request:
+    branches: [stable, master, release-*]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    env:
+      min-python-version: '3.10'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          submodules: true
+
+      - name: Set up Python ${{ env.min-python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.min-python-version }}
+
+      - id: get_date
+        name: Get date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python -
+
+      - name: Lint with flake8
+        run: poetry run flake8
+
+      - name: Check black formatting
+        run: poetry run  black . --exclude test.py --check
+        if: success() || failure()
+
+      - name: Check isort formatting
+        run: poetry run  isort . --check
+        if: success() || failure()
+
+      - name: Check mypy formatting
+        run: poetry run mypy --ignore-missing-imports .
+        if: success() || failure()
+
+      - name: Check for unused imports and pass statements
+        run: |
+          cmd="poetry run autoflake --remove-all-unused-imports --recursive --ignore-init-module-imports --ignore-pass-after-docstring agbenchmark"
+          $cmd --check || (echo "You have unused imports or pass statements, please run '${cmd} --in-place'" && exit 1)
+        if: success() || failure()
+
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          submodules: true
+          token: ${{ env.GH_TOKEN }}
+
+      - name: Setup Chrome and ChromeDriver
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo dpkg -i google-chrome-stable_current_amd64.deb
+          sudo apt-get install -f
+
+
+      - name: Set up Python ${{ env.min-python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.min-python-version }}
+
+      - id: get_date
+        name: Get date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python -
+
+      - name: Install dependencies
+        run: |
+          poetry install -vvv
+          poetry build
+
+      - name: Run regression tests
+        run: |
+          sh run
+
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AGENT_NAME: ${{ matrix.agent-name }}
+          HELICONE_API_KEY: ${{ secrets.HELICONE_API_KEY }}
+          REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+          HELICONE_CACHE_ENABLED: false
+          HELICONE_PROPERTY_AGENT: ${{ matrix.agent-name }}
+          REPORT_LOCATION: ${{ format('../../reports/{0}', matrix.agent-name) }}
