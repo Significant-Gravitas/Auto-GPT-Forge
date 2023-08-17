@@ -230,7 +230,7 @@ class Agent:
         """
         Retrieve the artifact data from wherever it is stored and return it as bytes.
         """
-        raise NotImplementedError("Retrieve artifact not implemented")
+        raise NotImplementedError("")
 
     async def save_artifact(
         self, task_id: str, artifact: Artifact, data: bytes | None = None
@@ -238,4 +238,4 @@ class Agent:
         """
         Save the artifact data to the agent's workspace, loading from uri if bytes are not available.
         """
-        raise NotImplementedError("Save artifact not implemented")
+        raise NotImplementedError()

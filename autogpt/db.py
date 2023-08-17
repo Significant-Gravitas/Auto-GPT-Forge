@@ -81,7 +81,6 @@ def convert_to_task(task_obj: TaskModel) -> Task:
                 additional_properties=step.additional_properties,
             )
         )
-
     return Task(
         task_id=task_obj.task_id,
         input=task_obj.input,
@@ -135,7 +134,7 @@ class AgentDB(TaskDB):
         session.add(new_task)
         session.commit()
         session.refresh(new_task)
-        return await self.get_task(new_task.task_id)
+        return convert_to_task(new_task)
 
     async def create_step(
         self,
@@ -155,7 +154,7 @@ class AgentDB(TaskDB):
         session.add(new_step)
         session.commit()
         session.refresh(new_step)
-        return await self.get_step(task_id, new_step.step_id)
+        return new_step
 
     async def create_artifact(
         self,

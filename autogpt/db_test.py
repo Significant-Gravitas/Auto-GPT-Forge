@@ -53,6 +53,17 @@ async def test_create_and_get_task():
 
 
 @pytest.mark.asyncio
+async def test_create_and_get_task_with_steps():
+    db_name = "sqlite:///test_db.sqlite3"
+    agent_db = AgentDB(db_name)
+    await agent_db.create_task("task_input")
+    task = await agent_db.get_task(1)
+
+    assert task.input == "task_input"
+    os.remove(db_name.split("///")[1])
+
+
+@pytest.mark.asyncio
 async def test_get_task_not_found():
     db_name = "sqlite:///test_db.sqlite3"
     agent_db = AgentDB(db_name)
@@ -157,6 +168,6 @@ async def test_list_steps():
 
     # Then: The fetched steps list includes the created steps
     step_ids = [step.step_id for step in fetched_steps]
-    assert step1.step_id in step_ids
-    assert step2.step_id in step_ids
+    assert str(step1.step_id) in step_ids
+    assert str(step2.step_id) in step_ids
     os.remove(db_name.split("///")[1])

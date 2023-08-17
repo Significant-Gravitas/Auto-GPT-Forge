@@ -1,7 +1,6 @@
 import os
 import time
 
-import autogpt.utils
 from autogpt.agent_protocol import Agent, Artifact, Step, Task, TaskDB
 
 from .workspace import Workspace
@@ -14,19 +13,19 @@ class AutoGPT(Agent):
 
     async def create_task(self, task: Task) -> None:
         print(f"task: {task.input}")
-        await Agent.db.create_step(task.task_id, task.input, is_last=True)
+        await self.db.create_step(task.task_id, task.input, is_last=True)
         time.sleep(2)
 
-        autogpt.utils.run(
-            task.input
-        )  # the task_handler only creates the task, it doesn't execute it
+        # autogpt.utils.run(
+        #     task.input
+        # )  # the task_handler only creates the task, it doesn't execute it
         # print(f"Created Task id: {task.task_id}")
         return task
 
     async def run_step(self, step: Step) -> Step:
         # print(f"step: {step}")
-        agent_step = await Agent.db.get_step(step.task_id, step.step_id)
-        updated_step: Step = await Agent.db.update_step(
+        agent_step = await self.db.get_step(step.task_id, step.step_id)
+        updated_step: Step = await self.db.update_step(
             agent_step.task_id, agent_step.step_id, status="completed"
         )
         updated_step.output = agent_step.input
