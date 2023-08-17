@@ -1,0 +1,3 @@
+[submodule "autogpt/protocol"]
+	path = autogpt/protocol
+	url = git@github.com:Swiftyos/agent-protocol.git
