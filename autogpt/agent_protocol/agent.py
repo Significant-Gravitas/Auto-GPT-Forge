@@ -151,7 +151,7 @@ async def upload_agent_task_artifacts(
     agent: Agent = request["agent"]
     if not file and not uri:
         return Response(status_code=400, content="No file or uri provided")
-
+    data = None
     if uri:
         artifact = Artifact(
             task_id=task_id,
@@ -169,10 +169,9 @@ async def upload_agent_task_artifacts(
         artifact = Artifact(
             task_id=task_id,
             file_name=file_name,
-            data=contents,
         )
 
-    artifact = await agent.save_artifact(task_id, artifact)
+    artifact = await agent.save_artifact(task_id, artifact, data)
     agent.db.add_artifact(task_id, artifact)
 
     return artifact
@@ -227,14 +226,16 @@ class Agent:
     async def run_step(self, step: Step) -> Step:
         return step
 
-    async def retrieve_artifact(self, task_id: str, artifact: Artifact) -> Artifact:
+    async def retrieve_artifact(self, task_id: str, artifact: Artifact) -> bytes:
         """
         Retrieve the artifact data from wherever it is stored and return it as bytes.
         """
-        return artifact
+        raise NotImplementedError("Retrieve artifact not implemented")
 
-    async def save_artifact(self, task_id: str, artifact: Artifact) -> Artifact:
+    async def save_artifact(
+        self, task_id: str, artifact: Artifact, data: bytes | None = None
+    ) -> Artifact:
         """
         Save the artifact data to the agent's workspace, loading from uri if bytes are not available.
         """
-        return artifact
+        raise NotImplementedError("Save artifact not implemented")
