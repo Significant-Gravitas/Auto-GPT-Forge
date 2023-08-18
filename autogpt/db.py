@@ -9,8 +9,7 @@ from typing import Dict, List, Optional
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, create_engine
 from sqlalchemy.orm import DeclarativeBase, joinedload, relationship, sessionmaker
 
-from autogpt.agent_protocol import Artifact, Step, Task, TaskDB
-from autogpt.agent_protocol.models import Status, TaskInput
+from .schema import Status, TaskInput, Artifact, Step, Task
 
 
 class Base(DeclarativeBase):
@@ -108,7 +107,7 @@ def convert_to_step(step_model: StepModel) -> Step:
 
 
 # sqlite:///{database_name}
-class AgentDB(TaskDB):
+class AgentDB:
     def __init__(self, database_string) -> None:
         super().__init__()
         self.engine = create_engine(database_string)
@@ -180,13 +179,12 @@ class AgentDB(TaskDB):
     async def get_task(self, task_id: int) -> Task:
         """Get a task by its id"""
         session = self.Session()
-        task_obj = (
+        if task_obj := (
             session.query(TaskModel)
             .options(joinedload(TaskModel.steps))
             .filter_by(task_id=task_id)
             .first()
-        )
-        if task_obj:
+        ):
             return convert_to_task(task_obj)
         else:
             raise DataNotFoundError("Task not found")
@@ -248,6 +246,8 @@ class AgentDB(TaskDB):
                 task_id=task.task_id,
                 input=task.input,
                 additional_input=task.additional_input,
+                artifacts=[],
+                steps=[],
             )
             for task in tasks
         ]

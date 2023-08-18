@@ -5,6 +5,64 @@ from autogpt.agent_protocol import Agent, Artifact, Step, Task, TaskDB
 
 from .workspace import Workspace
 
+# class Agent:
+
+#     def create_task(self, task: Task) -> Task:
+#         """
+#         Create a task for the agent.
+#         """
+#         raise NotImplementedError
+
+#     def list_tasks(self) -> List[str]:
+#         """
+#         List the IDs of all tasks that the agent has created.
+#         """
+#         raise NotImplementedError
+
+
+#     def get_task(self, task_id: str) -> Task:
+#         """
+#         Get a task by ID.
+#         """
+#         raise NotImplementedError
+
+#     def list_steps(self, task_id: str) -> List[str]:
+#         """
+#         List the IDs of all steps that the task has created.
+#         """
+#         raise NotImplementedError
+
+#     def create_and_execute_step(self, task_id: str, step: Step) -> Step:
+#         """
+#         Create a step for the task.
+#         """
+#         raise NotImplementedError
+
+#     def get_step(self, task_id: str, step_id: str) -> Step:
+#         """
+#         Get a step by ID.
+#         """
+#         raise NotImplementedError
+
+#     def list_artifacts(self, task_id: str) -> List[Artifact]:
+#         """
+#         List the artifacts that the task has created.
+#         """
+#         raise NotImplementedError
+
+
+#     def create_artifact(self, task_id: str, artifact: Artifact) -> Artifact:
+#         """
+#         Create an artifact for the task.
+#         """
+#         raise NotImplementedError
+
+#     def get_artifact(self, task_id: str, artifact_id: str) -> Artifact:
+#         """
+#         Get an artifact by ID.
+#         """
+#         raise NotImplementedError
+
 
 class AutoGPT(Agent):
     def __init__(self, db: TaskDB, workspace: Workspace) -> None:

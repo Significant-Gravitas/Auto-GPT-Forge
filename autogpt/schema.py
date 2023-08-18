@@ -80,7 +80,7 @@ class Task(TaskRequestBody):
         example="50da533e-3904-4401-8a07-c49adf88b5eb",
     )
     artifacts: Optional[List[Artifact]] = Field(
-        [],
+        ...,
         description="A list of artifacts that the task has produced.",
         example=[
             "7a49f31c-f9c6-4346-a22c-e32bc5af4d8e",
