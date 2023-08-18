@@ -6,14 +6,7 @@ IT IS NOT ADVISED TO USE THIS IN PRODUCTION!
 
 from typing import Dict, List, Optional
 
-from sqlalchemy import (
-    Boolean,
-    Column,
-    ForeignKey,
-    Integer,
-    String,
-    create_engine,
-)
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, create_engine
 from sqlalchemy.orm import DeclarativeBase, joinedload, relationship, sessionmaker
 
 from autogpt.agent_protocol import Artifact, Step, Task, TaskDB

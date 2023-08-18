@@ -18,7 +18,6 @@ import openai
 import requests
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-
 PROJECT_DIR = Path().resolve()
 workspace = os.path.join(PROJECT_DIR, "agbenchmark/workspace")
 
