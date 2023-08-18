@@ -1,14 +1,17 @@
 import asyncio
+import os
 import typing
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Response, UploadFile
+from fastapi.responses import FileResponse, JSONResponse
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
 
 from .db import AgentDB
 from .middlewares import AgentMiddleware
-from .routes import base_router
-from .schema import Step, Task
+from .routes.agent_protocol import base_router
+from .schema import Artifact, Status, Step, StepRequestBody, Task, TaskRequestBody
+from .utils import run
 from .workspace import Workspace
 
 
@@ -32,56 +35,186 @@ class Agent:
         app.add_middleware(AgentMiddleware, agent=self)
         asyncio.run(serve(app, config))
 
-    def create_task(self, task: Task) -> Task:
+    async def create_task(self, task_request: TaskRequestBody) -> Task:
         """
         Create a task for the agent.
         """
-        raise NotImplementedError
+        try:
+            task = await self.db.create_task(
+                input=task_request.input if task_request.input else None,
+                additional_input=task_request.additional_input
+                if task_request.additional_input
+                else None,
+            )
+            print(task)
+        except Exception as e:
+            return Response(status_code=500, content=str(e))
+        print(task)
+        return task
 
-    def list_tasks(self) -> typing.List[str]:
+    async def list_tasks(self) -> typing.List[str]:
         """
         List the IDs of all tasks that the agent has created.
         """
-        raise NotImplementedError
+        try:
+            task_ids = [task.task_id for task in await self.db.list_tasks()]
+        except Exception as e:
+            return Response(status_code=500, content=str(e))
+        return task_ids
 
-    def get_task(self, task_id: str) -> Task:
+    async def get_task(self, task_id: str) -> Task:
         """
         Get a task by ID.
         """
-        raise NotImplementedError
+        if not task_id:
+            return Response(status_code=400, content="Task ID is required.")
+        if not isinstance(task_id, str):
+            return Response(status_code=400, content="Task ID must be a string.")
+        try:
+            task = await self.db.get_task(task_id)
+        except Exception as e:
+            return Response(status_code=500, content=str(e))
+        return task
 
-    def list_steps(self, task_id: str) -> typing.List[str]:
+    async def list_steps(self, task_id: str) -> typing.List[str]:
         """
         List the IDs of all steps that the task has created.
         """
-        raise NotImplementedError
+        if not task_id:
+            return Response(status_code=400, content="Task ID is required.")
+        if not isinstance(task_id, str):
+            return Response(status_code=400, content="Task ID must be a string.")
+        try:
+            steps_ids = [step.step_id for step in await self.db.list_steps(task_id)]
+        except Exception as e:
+            return Response(status_code=500, content=str(e))
+        return steps_ids
 
-    def create_and_execute_step(self, task_id: str, step: Step) -> Step:
+    async def create_and_execute_step(
+        self, task_id: str, step_request: StepRequestBody
+    ) -> Step:
         """
         Create a step for the task.
         """
-        raise NotImplementedError
+        if step_request.input != "y":
+            step = await self.db.create_step(
+                task_id=task_id,
+                input=step_request.input if step_request else None,
+                additional_properties=step_request.additional_input
+                if step_request
+                else None,
+            )
+            # utils.run
+            artifacts = run(step.input)
+            for artifact in artifacts:
+                art = await self.db.create_artifact(
+                    task_id=step.task_id,
+                    file_name=artifact["file_name"],
+                    uri=artifact["uri"],
+                    agent_created=True,
+                    step_id=step.step_id,
+                )
+                assert isinstance(
+                    art, Artifact
+                ), f"Artifact not instance of Artifact {type(art)}"
+                step.artifacts.append(art)
+            step.status = "completed"
+        else:
+            steps = await self.db.list_steps(task_id)
+            artifacts = await self.db.list_artifacts(task_id)
+            step = steps[-1]
+            step.artifacts = artifacts
+            step.output = "No more steps to run."
+            step.is_last = True
+        if isinstance(step.status, Status):
+            step.status = step.status.value
+        step.output = "Done some work"
+        return JSONResponse(content=step.dict(), status_code=200)
 
-    def get_step(self, task_id: str, step_id: str) -> Step:
+    async def get_step(self, task_id: str, step_id: str) -> Step:
         """
         Get a step by ID.
         """
-        raise NotImplementedError
+        if not task_id or not step_id:
+            return Response(
+                status_code=400, content="Task ID and step ID are required."
+            )
+        if not isinstance(task_id, str) or not isinstance(step_id, str):
+            return Response(
+                status_code=400, content="Task ID and step ID must be strings."
+            )
+        try:
+            step = await self.db.get_step(task_id, step_id)
+        except Exception as e:
+            return Response(status_code=500, content=str(e))
+        return step
 
-    def list_artifacts(self, task_id: str) -> typing.List[Artifact]:
+    async def list_artifacts(self, task_id: str) -> typing.List[Artifact]:
         """
         List the artifacts that the task has created.
         """
-        raise NotImplementedError
+        if not task_id:
+            return Response(status_code=400, content="Task ID is required.")
+        if not isinstance(task_id, str):
+            return Response(status_code=400, content="Task ID must be a string.")
+        try:
+            artifacts = await self.db.list_artifacts(task_id)
+        except Exception as e:
+            return Response(status_code=500, content=str(e))
+        return artifacts
 
-    def create_artifact(self, task_id: str, artifact: Artifact) -> Artifact:
+    async def create_artifact(
+        self,
+        task_id: str,
+        file: UploadFile | None = None,
+        uri: str | None = None,
+    ) -> Artifact:
         """
         Create an artifact for the task.
         """
-        raise NotImplementedError
+        if not file and not uri:
+            return Response(status_code=400, content="No file or uri provided")
+        data = None
+        if not uri:
+            file_name = file.filename or str(uuid4())
+            try:
+                data = b""
+                while contents := file.file.read(1024 * 1024):
+                    data += contents
+            except Exception as e:
+                return Response(status_code=500, content=str(e))
 
-    def get_artifact(self, task_id: str, artifact_id: str) -> Artifact:
+            file_path = os.path.join(task_id / file_name)
+            self.write(file_path, data)
+            self.db.save_artifact(task_id, artifact)
+
+        artifact = await self.create_artifact(
+            task_id=task_id,
+            file_name=file_name,
+            uri=f"file://{file_path}",
+            agent_created=False,
+        )
+
+        return artifact
+
+    async def get_artifact(self, task_id: str, artifact_id: str) -> Artifact:
         """
         Get an artifact by ID.
         """
-        raise NotImplementedError
+        artifact = await self.db.get_artifact(task_id, artifact_id)
+        if not artifact.uri.startswith("file://"):
+            return Response(
+                status_code=500, content="Loading from none file uri not implemented"
+            )
+        file_path = artifact.uri.split("file://")[1]
+        if not self.workspace.exists(file_path):
+            return Response(status_code=500, content="File not found")
+        retrieved_artifact = self.workspace.read(file_path)
+        path = artifact.file_name
+        with open(path, "wb") as f:
+            f.write(retrieved_artifact)
+        return FileResponse(
+            # Note: mimetype is guessed in the FileResponse constructor
+            path=path,
+            filename=artifact.file_name,
+        )

@@ -27,14 +27,13 @@ from typing import List
 from fastapi import APIRouter, Request, UploadFile
 from fastapi.responses import FileResponse
 
-from ..agent import Agent
-from ..schema import Artifact, Step, StepRequestBody, Task, TaskRequestBody
+from autogpt.schema import Artifact, Step, StepRequestBody, Task, TaskRequestBody
 
 base_router = APIRouter()
 
 
 @base_router.post("/agent/tasks", tags=["agent"], response_model=Task)
-async def create_agent_task(request: Request, task: TaskRequestBody) -> Task:
+async def create_agent_task(request: Request, task_request: TaskRequestBody) -> Task:
     """
     Creates a new task using the provided TaskRequestBody and returns a Task.
 
@@ -61,9 +60,9 @@ async def create_agent_task(request: Request, task: TaskRequestBody) -> Task:
                 "steps": []
             }
     """
-    agent: Agent = request["agent"]
-    task = await agent.create_task(task)
-    return task
+    agent = request["agent"]
+    task_request = await agent.create_task(task_request)
+    return task_request
 
 
 @base_router.get("/agent/tasks", tags=["agent"], response_model=List[str])
@@ -88,7 +87,7 @@ async def list_agent_tasks_ids(request: Request) -> List[str]:
                 ...
             ]
     """
-    agent: Agent = request["agent"]
+    agent = request["agent"]
     return await agent.list_tasks()
 
 
@@ -144,7 +143,7 @@ async def get_agent_task(request: Request, task_id: str):
                 ]
             }
     """
-    agent: Agent = request["agent"]
+    agent = request["agent"]
     return await agent.get_task(task_id)
 
 
@@ -169,7 +168,7 @@ async def list_agent_task_steps(request: Request, task_id: str) -> List[str]:
         Response:
             ["step1_id", "step2_id", ...]
     """
-    agent: Agent = request["agent"]
+    agent = request["agent"]
     return await agent.list_steps(task_id)
 
 
@@ -216,7 +215,7 @@ async def execute_agent_task_step(
                 ...
             }
     """
-    agent: Agent = request["agent"]
+    agent = request["agent"]
     return await agent.create_and_execute_step(task_id, step)
 
 
@@ -246,7 +245,7 @@ async def get_agent_task_step(request: Request, task_id: str, step_id: str) -> S
                 ...
             }
     """
-    agent: Agent = request["agent"]
+    agent = request["agent"]
     return await agent.get_step(task_id, step_id)
 
 
@@ -275,7 +274,7 @@ async def list_agent_task_artifacts(request: Request, task_id: str) -> List[Arti
                 ...
             ]
     """
-    agent: Agent = request["agent"]
+    agent = request["agent"]
     return await agent.list_artifacts(task_id)
 
 
@@ -321,7 +320,7 @@ async def upload_agent_task_artifacts(
                 ...
             }
     """
-    agent: Agent = request["agent"]
+    agent = request["agent"]
     return await agent.create_artifact(task_id, file, uri)
 
 
@@ -349,5 +348,6 @@ async def download_agent_task_artifact(
         Response:
             <file_content_of_artifact>
     """
-    agent: Agent = request["agent"]
+    agent = request["agent"]
+    print(f"task_id: {task_id}, artifact_id: {artifact_id}")
     return await agent.get_artifact(task_id, artifact_id)
