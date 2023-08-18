@@ -120,7 +120,6 @@ async def test_get_artifact():
         file_name="sample_file.txt",
         uri="file:///path/to/sample_file.txt",
         agent_created=True,
-        data=None,
         step_id=step.step_id,
     )
 

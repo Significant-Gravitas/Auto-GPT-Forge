@@ -11,7 +11,6 @@ from sqlalchemy import (
     Column,
     ForeignKey,
     Integer,
-    LargeBinary,
     String,
     create_engine,
 )
@@ -46,6 +45,7 @@ class StepModel(Base):
     step_id = Column(Integer, primary_key=True, autoincrement=True)
     task_id = Column(Integer, ForeignKey("tasks.task_id"))
     name = Column(String)
+    input = Column(String)
     status = Column(String)
     is_last = Column(Boolean, default=False)
     additional_properties = Column(String)
@@ -61,7 +61,6 @@ class ArtifactModel(Base):
     step_id = Column(Integer, ForeignKey("steps.step_id"))
     agent_created = Column(Boolean, default=False)
     file_name = Column(String)
-    data = Column(LargeBinary)
     uri = Column(String)
 
     task = relationship("TaskModel", back_populates="artifacts")
@@ -91,13 +90,13 @@ def convert_to_task(task_obj: TaskModel) -> Task:
 
 
 def convert_to_step(step_model: StepModel) -> Step:
+    print(step_model)
     step_artifacts = [
         Artifact(
             artifact_id=artifact.artifact_id,
             file_name=artifact.file_name,
             agent_created=artifact.agent_created,
             uri=artifact.uri,
-            data=artifact.data.decode() if artifact.data else None,
         )
         for artifact in step_model.task.artifacts
         if artifact.step_id == step_model.step_id
@@ -107,6 +106,7 @@ def convert_to_step(step_model: StepModel) -> Step:
         task_id=step_model.task_id,
         step_id=step_model.step_id,
         name=step_model.name,
+        input=step_model.input,
         status=status,
         artifacts=step_artifacts,
         is_last=step_model.is_last == 1,
@@ -129,7 +129,7 @@ class AgentDB(TaskDB):
         session = self.Session()
         new_task = TaskModel(
             input=input,
-            additional_input=additional_input.json() if additional_input else None,
+            additional_input=additional_input.__root__ if additional_input else None,
         )
         session.add(new_task)
         session.commit()
@@ -140,6 +140,7 @@ class AgentDB(TaskDB):
         self,
         task_id: str,
         name: Optional[str] = None,
+        input: Optional[str] = None,
         is_last: bool = False,
         additional_properties: Optional[Dict[str, str]] = None,
     ) -> Step:
@@ -147,6 +148,7 @@ class AgentDB(TaskDB):
         new_step = StepModel(
             task_id=task_id,
             name=name,
+            input=input,
             status="created",
             is_last=is_last,
             additional_properties=additional_properties,
@@ -154,31 +156,33 @@ class AgentDB(TaskDB):
         session.add(new_step)
         session.commit()
         session.refresh(new_step)
-        return new_step
+        return convert_to_step(new_step)
 
     async def create_artifact(
         self,
         task_id: str,
         file_name: str,
         uri: str,
-        data: bytes | None = None,
         agent_created: bool = False,
         step_id: str | None = None,
     ) -> Artifact:
         session = self.Session()
+
+        if existing_artifact := session.query(ArtifactModel).filter_by(uri=uri).first():
+            session.close()
+            return existing_artifact
+
         new_artifact = ArtifactModel(
             task_id=task_id,
             step_id=step_id,
             agent_created=agent_created,
             file_name=file_name,
-            data=data,
             uri=uri,
         )
         session.add(new_artifact)
         session.commit()
         session.refresh(new_artifact)
-        ret_artifact = await self.get_artifact(task_id, new_artifact.artifact_id)
-        return ret_artifact
+        return await self.get_artifact(task_id, new_artifact.artifact_id)
 
     async def get_task(self, task_id: int) -> Task:
         """Get a task by its id"""
@@ -234,15 +238,11 @@ class AgentDB(TaskDB):
             .filter_by(task_id=task_id, artifact_id=artifact_id)
             .first()
         ):
-            # Convert binary data to a string representation or handle as you see fit
-            data_str = artifact_model.data.decode() if artifact_model.data else None
-
             return Artifact(
                 artifact_id=str(artifact_model.artifact_id),  # Casting to string
                 file_name=artifact_model.file_name,
                 agent_created=artifact_model.agent_created,
                 uri=artifact_model.uri,
-                data=data_str,
             )
         else:
             raise DataNotFoundError("Artifact not found")
@@ -270,4 +270,17 @@ class AgentDB(TaskDB):
                 status=step.status,
             )
             for step in steps
+        ]
+
+    async def list_artifacts(self, task_id: str) -> List[Artifact]:
+        session = self.Session()
+        artifacts = session.query(ArtifactModel).filter_by(task_id=task_id).all()
+        return [
+            Artifact(
+                artifact_id=str(artifact.artifact_id),
+                file_name=artifact.file_name,
+                agent_created=artifact.agent_created,
+                uri=artifact.uri,
+            )
+            for artifact in artifacts
         ]

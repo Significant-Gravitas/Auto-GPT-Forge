@@ -1,11 +1,9 @@
 import asyncio
-import os
-import tempfile
 from typing import List
 from uuid import uuid4
 
 from fastapi import APIRouter, Request, Response, UploadFile
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
 
@@ -38,6 +36,7 @@ async def create_agent_task(
         input=body.input if body else None,
         additional_input=body.additional_input if body else None,
     )
+    print(task)
     await agent.create_task(task)
 
     return task
@@ -90,21 +89,25 @@ async def execute_agent_task_step(
     """
     agent: Agent = request["agent"]
 
-    task = await agent.db.get_task(task_id)
-    step = next(filter(lambda x: x.status == Status.created, task.steps), None)
-
-    if not step:
-        raise Exception("No steps to execute")
-
-    step.status = Status.running
-
-    step.input = body.input if body else None
-    step.additional_input = body.additional_input if body else None
-
-    step = await agent.run_step(step)
-
-    step.status = Status.completed
-    return step
+    if body.input != "y":
+        step = await agent.db.create_step(
+            task_id=task_id,
+            input=body.input if body else None,
+            additional_properties=body.additional_input if body else None,
+        )
+        step = await agent.run_step(step)
+        step.output = "Task completed"
+        step.is_last = True
+    else:
+        steps = await agent.db.list_steps(task_id)
+        artifacts = await agent.db.list_artifacts(task_id)
+        step = steps[-1]
+        step.artifacts = artifacts
+        step.output = "No more steps to run."
+        step.is_last = True
+    if isinstance(step.status, Status):
+        step.status = step.status.value
+    return JSONResponse(content=step.dict(), status_code=200)
 
 
 @base_router.get(
@@ -152,13 +155,7 @@ async def upload_agent_task_artifacts(
     if not file and not uri:
         return Response(status_code=400, content="No file or uri provided")
     data = None
-    if uri:
-        artifact = Artifact(
-            task_id=task_id,
-            file_name=uri.spit("/")[-1],
-            uri=uri,
-        )
-    else:
+    if not uri:
         file_name = file.filename or str(uuid4())
         try:
             data = b""
@@ -166,10 +163,6 @@ async def upload_agent_task_artifacts(
                 data += contents
         except Exception as e:
             return Response(status_code=500, content=str(e))
-        artifact = Artifact(
-            task_id=task_id,
-            file_name=file_name,
-        )
 
     artifact = await agent.save_artifact(task_id, artifact, data)
     agent.db.add_artifact(task_id, artifact)
@@ -189,16 +182,15 @@ async def download_agent_task_artifacts(
     """
     agent: Agent = request["agent"]
     artifact = await agent.db.get_artifact(task_id, artifact_id)
-    retrieved_artifact: Artifact = agent.retrieve_artifact(task_id, artifact)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, artifact.file_name)
-        with open(path, "wb") as f:
-            f.write(retrieved_artifact.data)
-        return FileResponse(
-            # Note: mimetype is guessed in the FileResponse constructor
-            path=path,
-            filename=artifact.file_name,
-        )
+    retrieved_artifact: Artifact = await agent.retrieve_artifact(task_id, artifact)
+    path = artifact.file_name
+    with open(path, "wb") as f:
+        f.write(retrieved_artifact)
+    return FileResponse(
+        # Note: mimetype is guessed in the FileResponse constructor
+        path=path,
+        filename=artifact.file_name,
+    )
 
 
 class Agent:

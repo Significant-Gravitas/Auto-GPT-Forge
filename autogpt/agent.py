@@ -1,6 +1,6 @@
 import os
-import time
 
+import autogpt.utils
 from autogpt.agent_protocol import Agent, Artifact, Step, Task, TaskDB
 
 from .workspace import Workspace
@@ -13,27 +13,24 @@ class AutoGPT(Agent):
 
     async def create_task(self, task: Task) -> None:
         print(f"task: {task.input}")
-        await self.db.create_step(task.task_id, task.input, is_last=True)
-        time.sleep(2)
-
-        # autogpt.utils.run(
-        #     task.input
-        # )  # the task_handler only creates the task, it doesn't execute it
-        # print(f"Created Task id: {task.task_id}")
         return task
 
     async def run_step(self, step: Step) -> Step:
-        # print(f"step: {step}")
-        agent_step = await self.db.get_step(step.task_id, step.step_id)
-        updated_step: Step = await self.db.update_step(
-            agent_step.task_id, agent_step.step_id, status="completed"
-        )
-        updated_step.output = agent_step.input
-        if step.is_last:
-            print(f"Task completed: {updated_step.task_id}")
-        else:
-            print(f"Step completed: {updated_step}")
-        return updated_step
+        artifacts = autogpt.utils.run(step.input)
+        for artifact in artifacts:
+            art = await self.db.create_artifact(
+                task_id=step.task_id,
+                file_name=artifact["file_name"],
+                uri=artifact["uri"],
+                agent_created=True,
+                step_id=step.step_id,
+            )
+            assert isinstance(
+                art, Artifact
+            ), f"Artifact not isntance of Artifact {type(art)}"
+            step.artifacts.append(art)
+        step.status = "completed"
+        return step
 
     async def retrieve_artifact(self, task_id: str, artifact: Artifact) -> bytes:
         """
