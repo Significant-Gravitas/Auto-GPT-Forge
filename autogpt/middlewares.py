@@ -1,16 +1,4 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import PlainTextResponse
-
-from .db import NotFoundException
-
-
-async def not_found_exception_handler(
-    request: Request, exc: NotFoundException
-) -> PlainTextResponse:
-    return PlainTextResponse(
-        str(exc),
-        status_code=404,
-    )
+from fastapi import FastAPI
 
 
 class AgentMiddleware:

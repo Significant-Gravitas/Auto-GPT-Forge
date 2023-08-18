@@ -7,9 +7,9 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
 
+from ..middlewares import AgentMiddleware
+from ..schema import Artifact, Status, StepRequestBody, TaskRequestBody
 from .db import Step, Task, TaskDB
-from .middlewares import AgentMiddleware
-from .models import Artifact, Status, StepRequestBody, TaskRequestBody
 from .server import app
 
 base_router = APIRouter()

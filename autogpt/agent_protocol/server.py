@@ -6,8 +6,8 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
+from ..middlewares import not_found_exception_handler
 from .db import NotFoundException
-from .middlewares import not_found_exception_handler
 
 app = FastAPI(
     title="Agent Communication Protocol",

@@ -2,9 +2,9 @@ import uuid
 from abc import ABC
 from typing import Any, Dict, List, Optional
 
-from .models import Artifact, Status
-from .models import Step as APIStep
-from .models import Task as APITask
+from ..schema import Artifact, Status
+from ..schema import Step as APIStep
+from ..schema import Task as APITask
 
 
 class Step(APIStep):
