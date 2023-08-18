@@ -61,7 +61,7 @@ async def create_agent_task(request: Request, task: TaskRequestBody) -> Task:
                 "steps": []
             }
     """
-    agent: AutoGPT = request["agent"]
+    agent: Agent = request["agent"]
     task = await agent.create_task(task)
     return task
 
