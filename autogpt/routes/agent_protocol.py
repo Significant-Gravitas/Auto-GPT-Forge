@@ -27,8 +27,8 @@ from typing import List
 from fastapi import APIRouter, Request, UploadFile
 from fastapi.responses import FileResponse
 
-from .agent import Agent
-from .schema import Artifact, Step, StepRequestBody, Task, TaskRequestBody
+from ..agent import Agent
+from ..schema import Artifact, Step, StepRequestBody, Task, TaskRequestBody
 
 base_router = APIRouter()
 
