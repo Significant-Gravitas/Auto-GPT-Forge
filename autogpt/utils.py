@@ -164,3 +164,9 @@ def read_webpage(url: str) -> typing.Optional[str]:
     except Exception as e:
         print(f"Unable to read webpage: {e}")
     return contents
+
+
+if __name__ == "__main__":
+    test_messages = [{"role": "user", "content": "Hello, how are you?"}]
+    response = chat_completion_request(test_messages)
+    print(response)

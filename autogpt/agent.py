@@ -128,12 +128,18 @@ class Agent:
                 step.artifacts.append(art)
             step.status = "completed"
         else:
-            steps = await self.db.list_steps(task_id)
-            artifacts = await self.db.list_artifacts(task_id)
+            steps, steps_pagination = await self.db.list_steps(
+                task_id, page=1, per_page=100
+            )
+            artifacts, artifacts_pagination = await self.db.list_artifacts(
+                task_id, page=1, per_page=100
+            )
             step = steps[-1]
             step.artifacts = artifacts
             step.output = "No more steps to run."
-            step.is_last = True
+            # The step is the last step on this page so checking if this is the
+            # last page is sufficent to know if it is the last step
+            step.is_last = steps_pagination.current == steps_pagination.pages
         if isinstance(step.status, Status):
             step.status = step.status.value
         step.output = "Done some work"
@@ -218,7 +224,7 @@ class Agent:
 
         return artifact
 
-    async def load_from_uri(self, uri: str, artifact_id: str) -> bytes:
+    async def load_from_uri(self, uri: str, task_id: str) -> bytes:
         """
         Load file from given URI and return its bytes.
         """
@@ -226,44 +232,44 @@ class Agent:
         try:
             if uri.startswith("file://"):
                 file_path = uri.split("file://")[1]
-                if not self.workspace.exists(file_path):
+                if not self.workspace.exists(task_id, file_path):
                     return Response(status_code=500, content="File not found")
-                return self.workspace.read(file_path)
-            elif uri.startswith("s3://"):
-                import boto3
+                return self.workspace.read(task_id, file_path)
+            # elif uri.startswith("s3://"):
+            #     import boto3
 
-                s3 = boto3.client("s3")
-                bucket_name, key_name = uri[5:].split("/", 1)
-                file_path = "/tmp/" + artifact_id
-                s3.download_file(bucket_name, key_name, file_path)
-                with open(file_path, "rb") as f:
-                    return f.read()
-            elif uri.startswith("gs://"):
-                from google.cloud import storage
+            #     s3 = boto3.client("s3")
+            #     bucket_name, key_name = uri[5:].split("/", 1)
+            #     file_path = "/tmp/" + task_id
+            #     s3.download_file(bucket_name, key_name, file_path)
+            #     with open(file_path, "rb") as f:
+            #         return f.read()
+            # elif uri.startswith("gs://"):
+            #     from google.cloud import storage
 
-                storage_client = storage.Client()
-                bucket_name, blob_name = uri[5:].split("/", 1)
-                bucket = storage_client.bucket(bucket_name)
-                blob = bucket.blob(blob_name)
-                file_path = "/tmp/" + artifact_id
-                blob.download_to_filename(file_path)
-                with open(file_path, "rb") as f:
-                    return f.read()
-            elif uri.startswith("https://"):
-                from azure.storage.blob import BlobServiceClient
+            #     storage_client = storage.Client()
+            #     bucket_name, blob_name = uri[5:].split("/", 1)
+            #     bucket = storage_client.bucket(bucket_name)
+            #     blob = bucket.blob(blob_name)
+            #     file_path = "/tmp/" + task_id
+            #     blob.download_to_filename(file_path)
+            #     with open(file_path, "rb") as f:
+            #         return f.read()
+            # elif uri.startswith("https://"):
+            #     from azure.storage.blob import BlobServiceClient
 
-                blob_service_client = BlobServiceClient.from_connection_string(
-                    "my_connection_string"
-                )
-                container_name, blob_name = uri[8:].split("/", 1)
-                blob_client = blob_service_client.get_blob_client(
-                    container_name, blob_name
-                )
-                file_path = "/tmp/" + artifact_id
-                with open(file_path, "wb") as download_file:
-                    download_file.write(blob_client.download_blob().readall())
-                with open(file_path, "rb") as f:
-                    return f.read()
+            #     blob_service_client = BlobServiceClient.from_connection_string(
+            #         "my_connection_string"
+            #     )
+            #     container_name, blob_name = uri[8:].split("/", 1)
+            #     blob_client = blob_service_client.get_blob_client(
+            #         container_name, blob_name
+            #     )
+            #     file_path = "/tmp/" + task_id
+            #     with open(file_path, "wb") as download_file:
+            #         download_file.write(blob_client.download_blob().readall())
+            #     with open(file_path, "rb") as f:
+            #         return f.read()
             else:
                 return Response(status_code=500, content="Loading from unsupported uri")
         except Exception as e:
