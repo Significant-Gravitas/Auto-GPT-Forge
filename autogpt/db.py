@@ -4,12 +4,13 @@ It uses SQLite as the database and file store backend.
 IT IS NOT ADVISED TO USE THIS IN PRODUCTION!
 """
 
-from typing import Dict, List, Optional
+import math
+from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, create_engine
 from sqlalchemy.orm import DeclarativeBase, joinedload, relationship, sessionmaker
 
-from .schema import Artifact, Status, Step, Task, TaskInput
+from .schema import Artifact, Pagination, Status, Step, Task, TaskInput
 
 
 class Base(DeclarativeBase):
@@ -101,11 +102,15 @@ class AgentDB:
         self.Session = sessionmaker(bind=self.engine)
         print("Databases Created")
 
-    async def create_task(self, input: Optional[str], additional_input: Optional[TaskInput] = None) -> Task:
+    async def create_task(
+        self, input: Optional[str], additional_input: Optional[TaskInput] = None
+    ) -> Task:
         with self.Session() as session:
             new_task = TaskModel(
                 input=input,
-                additional_input=additional_input.__root__ if additional_input else None,
+                additional_input=additional_input.__root__
+                if additional_input
+                else None,
             )
             session.add(new_task)
             session.commit()
@@ -235,9 +240,18 @@ class AgentDB:
         else:
             raise DataNotFoundError("Artifact not found")
 
-    async def list_tasks(self) -> List[Task]:
+    async def list_tasks(
+        self, page: int = 1, per_page: int = 10
+    ) -> Tuple[List[Task], Pagination]:
         session = self.Session()
-        tasks = session.query(TaskModel).all()
+        tasks = (
+            session.query(TaskModel).offset((page - 1) * per_page).limit(per_page).all()
+        )
+        total = session.query(TaskModel).count()
+        pages = math.ceil(total / per_page)
+        pagination = Pagination(
+            total=total, pages=pages, current=page, pageSize=per_page
+        )
         return [
             Task(
                 task_id=task.task_id,
@@ -247,11 +261,24 @@ class AgentDB:
                 steps=[],
             )
             for task in tasks
-        ]
+        ], pagination
 
-    async def list_steps(self, task_id: str) -> List[Step]:
+    async def list_steps(
+        self, task_id: str, page: int = 1, per_page: int = 10
+    ) -> Tuple[List[Step], Pagination]:
         session = self.Session()
-        steps = session.query(StepModel).filter_by(task_id=task_id).all()
+        steps = (
+            session.query(StepModel)
+            .filter_by(task_id=task_id)
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+        total = session.query(StepModel).filter_by(task_id=task_id).count()
+        pages = math.ceil(total / per_page)
+        pagination = Pagination(
+            total=total, pages=pages, current=page, pageSize=per_page
+        )
         return [
             Step(
                 task_id=task_id,
@@ -260,11 +287,24 @@ class AgentDB:
                 status=step.status,
             )
             for step in steps
-        ]
+        ], pagination
 
-    async def list_artifacts(self, task_id: str) -> List[Artifact]:
+    async def list_artifacts(
+        self, task_id: str, page: int = 1, per_page: int = 10
+    ) -> Tuple[List[Artifact], Pagination]:
         with self.Session() as session:
-            artifacts = session.query(ArtifactModel).filter_by(task_id=task_id).all()
+            artifacts = (
+                session.query(ArtifactModel)
+                .filter_by(task_id=task_id)
+                .offset((page - 1) * per_page)
+                .limit(per_page)
+                .all()
+            )
+            total = session.query(ArtifactModel).filter_by(task_id=task_id).count()
+            pages = math.ceil(total / per_page)
+            pagination = Pagination(
+                total=total, pages=pages, current=page, pageSize=per_page
+            )
             return [
                 Artifact(
                     artifact_id=str(artifact.artifact_id),
@@ -273,4 +313,4 @@ class AgentDB:
                     uri=artifact.uri,
                 )
                 for artifact in artifacts
-            ]
+            ], pagination

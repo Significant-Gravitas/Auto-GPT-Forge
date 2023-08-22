@@ -143,7 +143,7 @@ async def test_list_tasks():
     task2 = await db.create_task("test_input_2")
 
     # When: All tasks are fetched
-    fetched_tasks = await db.list_tasks()
+    fetched_tasks, pagination = await db.list_tasks()
 
     # Then: The fetched tasks list includes the created tasks
     task_ids = [task.task_id for task in fetched_tasks]
@@ -163,10 +163,10 @@ async def test_list_steps():
     step2 = await db.create_step(task.task_id, "step_2")
 
     # When: All steps for the task are fetched
-    fetched_steps = await db.list_steps(task.task_id)
+    fetched_steps, pagination = await db.list_steps(task.task_id)
 
     # Then: The fetched steps list includes the created steps
     step_ids = [step.step_id for step in fetched_steps]
-    assert str(step1.step_id) in step_ids
-    assert str(step2.step_id) in step_ids
+    assert step1.step_id in step_ids
+    assert step2.step_id in step_ids
     os.remove(db_name.split("///")[1])

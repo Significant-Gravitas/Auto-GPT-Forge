@@ -10,6 +10,13 @@ from typing import Any, List, Optional
 from pydantic import BaseModel, Field
 
 
+class Pagination(BaseModel):
+    total: Optional[int] = Field(None, description="Total number of items.")
+    pages: Optional[int] = Field(None, description="Total number of pages.")
+    current: Optional[int] = Field(None, description="Current page number.")
+    pageSize: Optional[int] = Field(None, description="Number of items per page.")
+
+
 class TaskInput(BaseModel):
     __root__: Any = Field(
         ...,
