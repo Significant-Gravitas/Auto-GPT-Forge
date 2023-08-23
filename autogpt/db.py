@@ -14,7 +14,6 @@ from sqlalchemy.orm import DeclarativeBase, joinedload, relationship, sessionmak
 from .schema import Artifact, Pagination, Status, Step, Task, TaskInput
 
 LOG = logging.getLogger(__name__)
-LOG.setLevel(logging.DEBUG)
 
 
 class Base(DeclarativeBase):
