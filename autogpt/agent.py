@@ -14,7 +14,7 @@ from .middlewares import AgentMiddleware
 from .routes.agent_protocol import base_router
 from .schema import Artifact, Status, Step, StepRequestBody, Task, TaskRequestBody
 from .utils import run
-from .workspace import Workspace
+from .workspace import Workspace, load_from_uri
 
 LOG = logging.getLogger(__name__)
 
@@ -222,7 +222,7 @@ class Agent:
                 return Response(status_code=500, content=str(e))
         else:
             try:
-                data = await self.load_from_uri(uri, task_id)
+                data = await load_from_uri(uri, task_id)
                 file_name = uri.split("/")[-1]
             except Exception as e:
                 return Response(status_code=500, content=str(e))
