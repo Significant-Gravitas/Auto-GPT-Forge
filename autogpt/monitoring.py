@@ -10,21 +10,24 @@ Module used to describe all of the different data types
 import logging
 import logging.handlers
 
-RESET_SEQ = "\033[0m"
-COLOR_SEQ = "\033[1;%dm"
-BOLD_SEQ = "\033[1m"
-UNDERLINE_SEQ = "\033[04m"
+CHAT = 29
+logging.addLevelName(CHAT, "CHAT")
 
-ORANGE = "\033[33m"
-YELLOW = "\033[93m"
-WHITE = "\33[37m"
-BLUE = "\033[34m"
-LIGHT_BLUE = "\033[94m"
-RED = "\033[91m"
-GREY = "\33[90m"
-GREEN = "\033[92m"
+RESET_SEQ: str = "\033[0m"
+COLOR_SEQ: str = "\033[1;%dm"
+BOLD_SEQ: str = "\033[1m"
+UNDERLINE_SEQ: str = "\033[04m"
 
-EMOJIS = {
+ORANGE: str = "\033[33m"
+YELLOW: str = "\033[93m"
+WHITE: str = "\33[37m"
+BLUE: str = "\033[34m"
+LIGHT_BLUE: str = "\033[94m"
+RED: str = "\033[91m"
+GREY: str = "\33[90m"
+GREEN: str = "\033[92m"
+
+EMOJIS: dict[str, str] = {
     "DEBUG": "🐛",
     "INFO": "📝",
     "CHAT": "💬",
@@ -33,7 +36,7 @@ EMOJIS = {
     "CRITICAL": "💥",
 }
 
-KEYWORD_COLORS = {
+KEYWORD_COLORS: dict[str, str] = {
     "DEBUG": WHITE,
     "INFO": LIGHT_BLUE,
     "CHAT": GREEN,
@@ -43,7 +46,7 @@ KEYWORD_COLORS = {
 }
 
 
-def formatter_message(message, use_color=True):
+def formatter_message(message: str, use_color: bool = True) -> str:
     """
     Syntax highlight certain keywords
     """
@@ -54,7 +57,9 @@ def formatter_message(message, use_color=True):
     return message
 
 
-def format_word(message, word, color_seq, bold=False, underline=False):
+def format_word(
+    message: str, word: str, color_seq: str, bold: bool = False, underline: bool = False
+) -> str:
     """
     Surround the fiven word with a sequence
     """
@@ -71,11 +76,13 @@ class ConsoleFormatter(logging.Formatter):
     This Formatted simply colors in the levelname i.e 'INFO', 'DEBUG'
     """
 
-    def __init__(self, fmt, datefmt=None, style="%", use_color=True):
+    def __init__(
+        self, fmt: str, datefmt: str = None, style: str = "%", use_color: bool = True
+    ):
         super().__init__(fmt, datefmt, style)
         self.use_color = use_color
 
-    def format(self, record):
+    def format(self, record: logging.LogRecord) -> str:
         """
         Format and highlight certain keywords
         """
@@ -84,7 +91,7 @@ class ConsoleFormatter(logging.Formatter):
         if self.use_color and levelname in KEYWORD_COLORS:
             levelname_color = KEYWORD_COLORS[levelname] + levelname + RESET_SEQ
             rec.levelname = levelname_color
-        rec.name = GREY + f"{rec.name:<15}" + RESET_SEQ
+        rec.name = f"{GREY}{rec.name:<15}{RESET_SEQ}"
         rec.msg = (
             KEYWORD_COLORS[levelname] + EMOJIS[levelname] + "  " + rec.msg + RESET_SEQ
         )
@@ -97,14 +104,14 @@ class CustomLogger(logging.Logger):
     sets the logger to use the custom formatter
     """
 
-    CONSOLE_FORMAT = (
+    CONSOLE_FORMAT: str = (
         "[%(asctime)s] [$BOLD%(name)-15s$RESET] [%(levelname)-8s]\t%(message)s"
     )
-    FORMAT = "%(asctime)s %(name)-15s %(levelname)-8s %(message)s"
-    COLOR_FORMAT = formatter_message(CONSOLE_FORMAT, True)
-    JSON_FORMAT = '{"time": "%(asctime)s", "name": "%(name)s", "level": "%(levelname)s", "message": "%(message)s"}'
+    FORMAT: str = "%(asctime)s %(name)-15s %(levelname)-8s %(message)s"
+    COLOR_FORMAT: str = formatter_message(CONSOLE_FORMAT, True)
+    JSON_FORMAT: str = '{"time": "%(asctime)s", "name": "%(name)s", "level": "%(levelname)s", "message": "%(message)s"}'
 
-    def __init__(self, name, logLevel="DEBUG"):
+    def __init__(self, name: str, logLevel: str = "DEBUG"):
         logging.Logger.__init__(self, name, logLevel)
 
         # Queue Handler
@@ -118,12 +125,22 @@ class CustomLogger(logging.Logger):
         console.setFormatter(console_formatter)
         self.addHandler(console)
 
-    def chat(self, message):
+    def chat(self, role: str, openai_repsonse: dict, *args, **kws):
         """
-        Log a chat message
+        Parse the content, log the message and extract the usage into prometheus metrics
         """
-        response = json.loads(message)
-        self.info(f"Chat: {response['message']}")
+        if self.isEnabledFor(CHAT):
+            response = json.loads(openai_repsonse)
+            role_emojis = {
+                "system": "🖥️",
+                "user": "👤",
+                "assistant": "🤖",
+                "function": "⚙️",
+            }
+            self._log(
+                CHAT,
+                f"{role_emojis.get(role, '🔵')}: {response['choices'][0]['message']['content']}",
+            )
 
 
 class QueueLogger(logging.Logger):
@@ -131,13 +148,13 @@ class QueueLogger(logging.Logger):
     Custom logger class with queue
     """
 
-    def __init__(self, name, level=logging.NOTSET):
+    def __init__(self, name: str, level: int = logging.NOTSET):
         super().__init__(name, level)
         queue_handler = logging.handlers.QueueHandler(queue.Queue(-1))
         self.addHandler(queue_handler)
 
 
-logging_config = dict(
+logging_config: dict = dict(
     version=1,
     formatters={
         "console": {
@@ -166,10 +183,8 @@ logging_config = dict(
 )
 
 
-def setup_logger(json_format=False):
+def setup_logger():
     """
     Setup the logger with the specified format
     """
     logging.config.dictConfig(logging_config)
-    logger = logging.getLogger("AutoGPT")
-    logger.propagate = True

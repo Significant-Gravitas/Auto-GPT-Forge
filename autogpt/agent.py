@@ -46,9 +46,8 @@ class Agent:
 
         app.include_router(router)
         app.add_middleware(AgentMiddleware, agent=self)
-
         config.loglevel = "ERROR"
-        LOG.info("Tests")
+
         logging.info(f"Agent server starting on http://127.0.0.1:{port}")
         asyncio.run(serve(app, config))
 

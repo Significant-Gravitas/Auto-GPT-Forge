@@ -1,5 +1,3 @@
-import logging
-import logging.config
 import os
 
 from dotenv import load_dotenv
@@ -11,7 +9,7 @@ import autogpt.monitoring
 
 autogpt.monitoring.setup_logger()
 
-LOG = logging.getLogger(__name__)
+LOG = autogpt.monitoring.CustomLogger(__name__)
 
 if __name__ == "__main__":
     """Runs the agent server"""
@@ -28,11 +26,6 @@ if __name__ == "__main__":
     database_name = os.getenv("DATABASE_STRING")
     workspace = LocalWorkspace(os.getenv("AGENT_WORKSPACE"))
     port = os.getenv("PORT")
-    LOG.debug("Debug level test message")
-    LOG.info("Info level test message")
-    LOG.warning("Warning level test message")
-    LOG.error("Error level test message")
-    LOG.critical("Critical level test message")
 
     database = autogpt.db.AgentDB(database_name, debug_enabled=True)
     agent = autogpt.agent.Agent(database=database, workspace=workspace)
