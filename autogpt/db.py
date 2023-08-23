@@ -4,6 +4,7 @@ It uses SQLite as the database and file store backend.
 IT IS NOT ADVISED TO USE THIS IN PRODUCTION!
 """
 
+import logging
 import math
 from typing import Dict, List, Optional, Tuple
 
@@ -11,6 +12,9 @@ from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, create_engi
 from sqlalchemy.orm import DeclarativeBase, joinedload, relationship, sessionmaker
 
 from .schema import Artifact, Pagination, Status, Step, Task, TaskInput
+
+LOG = logging.getLogger(__name__)
+LOG.setLevel(logging.DEBUG)
 
 
 class Base(DeclarativeBase):
@@ -59,7 +63,9 @@ class ArtifactModel(Base):
     task = relationship("TaskModel", back_populates="artifacts")
 
 
-def convert_to_task(task_obj: TaskModel) -> Task:
+def convert_to_task(task_obj: TaskModel, debug_enabled: bool = False) -> Task:
+    if debug_enabled:
+        LOG.debug(f"Converting TaskModel to Task for task_id: {task_obj.task_id}")
     return Task(
         task_id=task_obj.task_id,
         input=task_obj.input,
@@ -68,8 +74,9 @@ def convert_to_task(task_obj: TaskModel) -> Task:
     )
 
 
-def convert_to_step(step_model: StepModel) -> Step:
-    print(step_model)
+def convert_to_step(step_model: StepModel, debug_enabled: bool = False) -> Step:
+    if debug_enabled:
+        LOG.debug(f"Converting StepModel to Step for step_id: {step_model.step_id}")
     step_artifacts = [
         Artifact(
             artifact_id=artifact.artifact_id,
@@ -95,16 +102,20 @@ def convert_to_step(step_model: StepModel) -> Step:
 
 # sqlite:///{database_name}
 class AgentDB:
-    def __init__(self, database_string) -> None:
+    def __init__(self, database_string, debug_enabled: bool = False) -> None:
         super().__init__()
+        self.debug_enabled = debug_enabled
+        if self.debug_enabled:
+            LOG.debug(f"Initializing AgentDB with database_string: {database_string}")
         self.engine = create_engine(database_string)
         Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(bind=self.engine)
-        print("Databases Created")
 
     async def create_task(
         self, input: Optional[str], additional_input: Optional[TaskInput] = None
     ) -> Task:
+        if self.debug_enabled:
+            LOG.debug("Creating new task")
         with self.Session() as session:
             new_task = TaskModel(
                 input=input,
@@ -115,7 +126,9 @@ class AgentDB:
             session.add(new_task)
             session.commit()
             session.refresh(new_task)
-            return convert_to_task(new_task)
+            if self.debug_enabled:
+                LOG.debug(f"Created new task with task_id: {new_task.task_id}")
+            return convert_to_task(new_task, self.debug_enabled)
 
     async def create_step(
         self,
@@ -125,6 +138,8 @@ class AgentDB:
         is_last: bool = False,
         additional_properties: Optional[Dict[str, str]] = None,
     ) -> Step:
+        if self.debug_enabled:
+            LOG.debug(f"Creating new step for task_id: {task_id}")
         try:
             session = self.Session()
             new_step = StepModel(
@@ -138,9 +153,12 @@ class AgentDB:
             session.add(new_step)
             session.commit()
             session.refresh(new_step)
+            if self.debug_enabled:
+                LOG.debug(f"Created new step with step_id: {new_step.step_id}")
         except Exception as e:
+            LOG.error(f"Error while creating step: {e}")
             print(e)
-        return convert_to_step(new_step)
+        return convert_to_step(new_step, self.debug_enabled)
 
     async def create_artifact(
         self,
@@ -150,10 +168,14 @@ class AgentDB:
         agent_created: bool = False,
         step_id: str | None = None,
     ) -> Artifact:
+        if self.debug_enabled:
+            LOG.debug(f"Creating new artifact for task_id: {task_id}")
         session = self.Session()
 
         if existing_artifact := session.query(ArtifactModel).filter_by(uri=uri).first():
             session.close()
+            if self.debug_enabled:
+                LOG.debug(f"Artifact already exists with uri: {uri}")
             return Artifact(
                 artifact_id=str(existing_artifact.artifact_id),
                 file_name=existing_artifact.file_name,
@@ -171,6 +193,10 @@ class AgentDB:
         session.add(new_artifact)
         session.commit()
         session.refresh(new_artifact)
+        if self.debug_enabled:
+            LOG.debug(
+                f"Created new artifact with artifact_id: {new_artifact.artifact_id}"
+            )
         return Artifact(
             artifact_id=str(new_artifact.artifact_id),
             file_name=new_artifact.file_name,
@@ -180,6 +206,8 @@ class AgentDB:
 
     async def get_task(self, task_id: int) -> Task:
         """Get a task by its id"""
+        if self.debug_enabled:
+            LOG.debug(f"Getting task with task_id: {task_id}")
         session = self.Session()
         if task_obj := (
             session.query(TaskModel)
@@ -187,11 +215,14 @@ class AgentDB:
             .filter_by(task_id=task_id)
             .first()
         ):
-            return convert_to_task(task_obj)
+            return convert_to_task(task_obj, self.debug_enabled)
         else:
+            LOG.error(f"Task not found with task_id: {task_id}")
             raise DataNotFoundError("Task not found")
 
     async def get_step(self, task_id: int, step_id: int) -> Step:
+        if self.debug_enabled:
+            LOG.debug(f"Getting step with task_id: {task_id} and step_id: {step_id}")
         session = self.Session()
         if step := (
             session.query(StepModel)
@@ -199,9 +230,10 @@ class AgentDB:
             .filter(StepModel.step_id == step_id)
             .first()
         ):
-            return convert_to_step(step)
+            return convert_to_step(step, self.debug_enabled)
 
         else:
+            LOG.error(f"Step not found with task_id: {task_id} and step_id: {step_id}")
             raise DataNotFoundError("Step not found")
 
     async def update_step(
@@ -211,6 +243,8 @@ class AgentDB:
         status: str,
         additional_properties: Optional[Dict[str, str]] = None,
     ) -> Step:
+        if self.debug_enabled:
+            LOG.debug(f"Updating step with task_id: {task_id} and step_id: {step_id}")
         session = self.Session()
         if (
             step := session.query(StepModel)
@@ -222,9 +256,16 @@ class AgentDB:
             session.commit()
             return await self.get_step(task_id, step_id)
         else:
+            LOG.error(
+                f"Step not found for update with task_id: {task_id} and step_id: {step_id}"
+            )
             raise DataNotFoundError("Step not found")
 
     async def get_artifact(self, task_id: str, artifact_id: str) -> Artifact:
+        if self.debug_enabled:
+            LOG.debug(
+                f"Getting artifact with task_id: {task_id} and artifact_id: {artifact_id}"
+            )
         session = self.Session()
         if artifact_model := (
             session.query(ArtifactModel)
@@ -238,11 +279,16 @@ class AgentDB:
                 uri=artifact_model.uri,
             )
         else:
+            LOG.error(
+                f"Artifact not found with task_id: {task_id} and artifact_id: {artifact_id}"
+            )
             raise DataNotFoundError("Artifact not found")
 
     async def list_tasks(
         self, page: int = 1, per_page: int = 10
     ) -> Tuple[List[Task], Pagination]:
+        if self.debug_enabled:
+            LOG.debug("Listing tasks")
         session = self.Session()
         tasks = (
             session.query(TaskModel).offset((page - 1) * per_page).limit(per_page).all()
@@ -266,6 +312,8 @@ class AgentDB:
     async def list_steps(
         self, task_id: str, page: int = 1, per_page: int = 10
     ) -> Tuple[List[Step], Pagination]:
+        if self.debug_enabled:
+            LOG.debug(f"Listing steps for task_id: {task_id}")
         session = self.Session()
         steps = (
             session.query(StepModel)
@@ -292,6 +340,8 @@ class AgentDB:
     async def list_artifacts(
         self, task_id: str, page: int = 1, per_page: int = 10
     ) -> Tuple[List[Artifact], Pagination]:
+        if self.debug_enabled:
+            LOG.debug(f"Listing artifacts for task_id: {task_id}")
         with self.Session() as session:
             artifacts = (
                 session.query(ArtifactModel)

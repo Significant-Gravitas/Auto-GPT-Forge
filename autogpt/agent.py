@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import typing
 
@@ -6,6 +7,7 @@ from fastapi import APIRouter, FastAPI, Response, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from .db import AgentDB
 from .middlewares import AgentMiddleware
@@ -13,6 +15,8 @@ from .routes.agent_protocol import base_router
 from .schema import Artifact, Status, Step, StepRequestBody, Task, TaskRequestBody
 from .utils import run
 from .workspace import Workspace
+
+LOG = logging.getLogger(__name__)
 
 
 class Agent:
@@ -31,8 +35,21 @@ class Agent:
             description="Modified version of The Agent Protocol.",
             version="v0.4",
         )
+
+        # Add Prometheus metrics to the agent
+        # https://github.com/trallnag/prometheus-fastapi-instrumentator
+        instrumentator = Instrumentator().instrument(app)
+
+        @app.on_event("startup")
+        async def _startup():
+            instrumentator.expose(app)
+
         app.include_router(router)
         app.add_middleware(AgentMiddleware, agent=self)
+
+        config.loglevel = "ERROR"
+        LOG.info("Tests")
+        logging.info(f"Agent server starting on http://127.0.0.1:{port}")
         asyncio.run(serve(app, config))
 
     async def create_task(self, task_request: TaskRequestBody) -> Task:
@@ -223,57 +240,6 @@ class Agent:
         )
 
         return artifact
-
-    async def load_from_uri(self, uri: str, task_id: str) -> bytes:
-        """
-        Load file from given URI and return its bytes.
-        """
-        file_path = None
-        try:
-            if uri.startswith("file://"):
-                file_path = uri.split("file://")[1]
-                if not self.workspace.exists(task_id, file_path):
-                    return Response(status_code=500, content="File not found")
-                return self.workspace.read(task_id, file_path)
-            # elif uri.startswith("s3://"):
-            #     import boto3
-
-            #     s3 = boto3.client("s3")
-            #     bucket_name, key_name = uri[5:].split("/", 1)
-            #     file_path = "/tmp/" + task_id
-            #     s3.download_file(bucket_name, key_name, file_path)
-            #     with open(file_path, "rb") as f:
-            #         return f.read()
-            # elif uri.startswith("gs://"):
-            #     from google.cloud import storage
-
-            #     storage_client = storage.Client()
-            #     bucket_name, blob_name = uri[5:].split("/", 1)
-            #     bucket = storage_client.bucket(bucket_name)
-            #     blob = bucket.blob(blob_name)
-            #     file_path = "/tmp/" + task_id
-            #     blob.download_to_filename(file_path)
-            #     with open(file_path, "rb") as f:
-            #         return f.read()
-            # elif uri.startswith("https://"):
-            #     from azure.storage.blob import BlobServiceClient
-
-            #     blob_service_client = BlobServiceClient.from_connection_string(
-            #         "my_connection_string"
-            #     )
-            #     container_name, blob_name = uri[8:].split("/", 1)
-            #     blob_client = blob_service_client.get_blob_client(
-            #         container_name, blob_name
-            #     )
-            #     file_path = "/tmp/" + task_id
-            #     with open(file_path, "wb") as download_file:
-            #         download_file.write(blob_client.download_blob().readall())
-            #     with open(file_path, "rb") as f:
-            #         return f.read()
-            else:
-                return Response(status_code=500, content="Loading from unsupported uri")
-        except Exception as e:
-            return Response(status_code=500, content=str(e))
 
     async def get_artifact(self, task_id: str, artifact_id: str) -> Artifact:
         """

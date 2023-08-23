@@ -36,7 +36,6 @@ async def create_agent_task(
         input=body.input if body else None,
         additional_input=body.additional_input if body else None,
     )
-    print(task)
     await agent.create_task(task)
 
     return task
