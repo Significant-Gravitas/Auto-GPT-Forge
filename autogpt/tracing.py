@@ -2,6 +2,8 @@ import os
 from functools import wraps
 
 from autogpt.forge_log import CustomLogger
+from dotenv import load_dotenv
+load_dotenv()
 
 ENABLE_TRACING = os.environ.get("ENABLE_TRACING", "false").lower() == "true"
 
@@ -22,7 +24,7 @@ def setup_tracing(app):
 
         # Configure the tracer provider to export traces to Jaeger
         jaeger_exporter = JaegerExporter(
-            agent_host_name="localhost",
+            agent_host_name="jaeger",
             agent_port=6831,
         )
 
