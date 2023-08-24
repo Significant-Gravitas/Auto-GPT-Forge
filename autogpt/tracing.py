@@ -1,8 +1,10 @@
 import os
 from functools import wraps
 
-from autogpt.forge_log import CustomLogger
 from dotenv import load_dotenv
+
+from autogpt.forge_log import CustomLogger
+
 load_dotenv()
 
 ENABLE_TRACING = os.environ.get("ENABLE_TRACING", "false").lower() == "true"
