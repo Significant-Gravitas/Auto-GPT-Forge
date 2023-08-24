@@ -46,6 +46,7 @@ opentelemetry-api = "^1.19.0"
 opentelemetry-sdk = "^1.19.0"
 opentelemetry-exporter-otlp = "^1.19.0"
 opentelemetry-instrumentation-fastapi = "^0.40b0"
+opentelemetry-exporter-jaeger = "^1.19.0"
 
 [build-system]
 requires = ["poetry-core"]

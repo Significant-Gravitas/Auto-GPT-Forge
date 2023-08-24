@@ -1,14 +1,12 @@
 import json
 import logging
 import logging.config
+import logging.handlers
+import os
 import queue
 
-"""
-Module used to describe all of the different data types
-"""
+ENABLE_TRACING = os.environ.get("ENABLE_TRACING", "false").lower() == "true"
 
-import logging
-import logging.handlers
 
 CHAT = 29
 logging.addLevelName(CHAT, "CHAT")

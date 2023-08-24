@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import os
 import typing
 
@@ -10,13 +9,15 @@ from hypercorn.config import Config
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from .db import AgentDB
+from .forge_log import CustomLogger
 from .middlewares import AgentMiddleware
 from .routes.agent_protocol import base_router
 from .schema import Artifact, Status, Step, StepRequestBody, Task, TaskRequestBody
+from .tracing import setup_tracing
 from .utils import run
 from .workspace import Workspace, load_from_uri
 
-LOG = logging.getLogger(__name__)
+LOG = CustomLogger(__name__)
 
 
 class Agent:
@@ -46,9 +47,10 @@ class Agent:
 
         app.include_router(router)
         app.add_middleware(AgentMiddleware, agent=self)
+        setup_tracing(app)
         config.loglevel = "ERROR"
 
-        logging.info(f"Agent server starting on http://127.0.0.1:{port}")
+        LOG.info(f"Agent server starting on http://127.0.0.1:{port}")
         asyncio.run(serve(app, config))
 
     async def create_task(self, task_request: TaskRequestBody) -> Task:

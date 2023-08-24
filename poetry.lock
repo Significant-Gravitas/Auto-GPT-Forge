@@ -1381,21 +1381,21 @@ requests = ["requests (>=2.18.0,<3.0.0dev)"]
 
 [[package]]
 name = "googleapis-common-protos"
-version = "1.60.0"
+version = "1.56.2"
 description = "Common protobufs used in Google APIs"
 category = "main"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.6"
 files = [
-    {file = "googleapis-common-protos-1.60.0.tar.gz", hash = "sha256:e73ebb404098db405ba95d1e1ae0aa91c3e15a71da031a2eeb6b2e23e7bc3708"},
-    {file = "googleapis_common_protos-1.60.0-py2.py3-none-any.whl", hash = "sha256:69f9bbcc6acde92cab2db95ce30a70bd2b81d20b12eff3f1aabaffcbe8a93918"},
+    {file = "googleapis-common-protos-1.56.2.tar.gz", hash = "sha256:b09b56f5463070c2153753ef123f07d2e49235e89148e9b2459ec8ed2f68d7d3"},
+    {file = "googleapis_common_protos-1.56.2-py2.py3-none-any.whl", hash = "sha256:023eaea9d8c1cceccd9587c6af6c20f33eeeb05d4148670f2b0322dc1511700c"},
 ]
 
 [package.dependencies]
-protobuf = ">=3.19.5,<3.20.0 || >3.20.0,<3.20.1 || >3.20.1,<4.21.1 || >4.21.1,<4.21.2 || >4.21.2,<4.21.3 || >4.21.3,<4.21.4 || >4.21.4,<4.21.5 || >4.21.5,<5.0.0.dev0"
+protobuf = ">=3.15.0,<4.0.0dev"
 
 [package.extras]
-grpc = ["grpcio (>=1.44.0,<2.0.0.dev0)"]
+grpc = ["grpcio (>=1.0.0,<2.0.0dev)"]
 
 [[package]]
 name = "gradio"
@@ -2602,6 +2602,57 @@ deprecated = ">=1.2.6"
 importlib-metadata = ">=6.0,<7.0"
 
 [[package]]
+name = "opentelemetry-exporter-jaeger"
+version = "1.19.0"
+description = "Jaeger Exporters for OpenTelemetry"
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "opentelemetry_exporter_jaeger-1.19.0-py3-none-any.whl", hash = "sha256:a7235a386eaa89bd866967c95dfd15ee5fd216cf313c50b9f5ebc27ee8ec4c76"},
+    {file = "opentelemetry_exporter_jaeger-1.19.0.tar.gz", hash = "sha256:feffaf67e1d9cead104f255d159ea412822f48a7b0aa4617090ab91b6d07de7e"},
+]
+
+[package.dependencies]
+opentelemetry-exporter-jaeger-proto-grpc = "1.19.0"
+opentelemetry-exporter-jaeger-thrift = "1.19.0"
+
+[[package]]
+name = "opentelemetry-exporter-jaeger-proto-grpc"
+version = "1.19.0"
+description = "Jaeger Protobuf Exporter for OpenTelemetry"
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "opentelemetry_exporter_jaeger_proto_grpc-1.19.0-py3-none-any.whl", hash = "sha256:702b71c2b15b0d6fc261de69ec5793b99300bc5986be57517d00ad4b3148be21"},
+    {file = "opentelemetry_exporter_jaeger_proto_grpc-1.19.0.tar.gz", hash = "sha256:2d7d64dd8b4ae95f55dba549efb24229ee0c6cbed4d4f6cc16bda69ec4ce8203"},
+]
+
+[package.dependencies]
+googleapis-common-protos = ">=1.52,<1.56.3"
+grpcio = ">=1.0.0,<2.0.0"
+opentelemetry-api = ">=1.3,<2.0"
+opentelemetry-sdk = ">=1.11,<2.0"
+
+[[package]]
+name = "opentelemetry-exporter-jaeger-thrift"
+version = "1.19.0"
+description = "Jaeger Thrift Exporter for OpenTelemetry"
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "opentelemetry_exporter_jaeger_thrift-1.19.0-py3-none-any.whl", hash = "sha256:ed22f3c3dab822e5bf7e190302b51eafccce9dd58d43226fc6546676076acecc"},
+    {file = "opentelemetry_exporter_jaeger_thrift-1.19.0.tar.gz", hash = "sha256:f73daebd2cfb630e391098b11d1aa0d8bcaadb504197d2ecf6dfa8708c7c48ac"},
+]
+
+[package.dependencies]
+opentelemetry-api = ">=1.3,<2.0"
+opentelemetry-sdk = ">=1.11,<2.0"
+thrift = ">=0.10.0"
+
+[[package]]
 name = "opentelemetry-exporter-otlp"
 version = "1.19.0"
 description = "OpenTelemetry Collector Exporters"
@@ -3215,25 +3266,34 @@ wcwidth = "*"
 
 [[package]]
 name = "protobuf"
-version = "4.24.0"
-description = ""
+version = "3.20.3"
+description = "Protocol Buffers"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "protobuf-4.24.0-cp310-abi3-win32.whl", hash = "sha256:81cb9c4621d2abfe181154354f63af1c41b00a4882fb230b4425cbaed65e8f52"},
-    {file = "protobuf-4.24.0-cp310-abi3-win_amd64.whl", hash = "sha256:6c817cf4a26334625a1904b38523d1b343ff8b637d75d2c8790189a4064e51c3"},
-    {file = "protobuf-4.24.0-cp37-abi3-macosx_10_9_universal2.whl", hash = "sha256:ae97b5de10f25b7a443b40427033e545a32b0e9dda17bcd8330d70033379b3e5"},
-    {file = "protobuf-4.24.0-cp37-abi3-manylinux2014_aarch64.whl", hash = "sha256:567fe6b0647494845d0849e3d5b260bfdd75692bf452cdc9cb660d12457c055d"},
-    {file = "protobuf-4.24.0-cp37-abi3-manylinux2014_x86_64.whl", hash = "sha256:a6b1ca92ccabfd9903c0c7dde8876221dc7d8d87ad5c42e095cc11b15d3569c7"},
-    {file = "protobuf-4.24.0-cp37-cp37m-win32.whl", hash = "sha256:a38400a692fd0c6944c3c58837d112f135eb1ed6cdad5ca6c5763336e74f1a04"},
-    {file = "protobuf-4.24.0-cp37-cp37m-win_amd64.whl", hash = "sha256:5ab19ee50037d4b663c02218a811a5e1e7bb30940c79aac385b96e7a4f9daa61"},
-    {file = "protobuf-4.24.0-cp38-cp38-win32.whl", hash = "sha256:e8834ef0b4c88666ebb7c7ec18045aa0f4325481d724daa624a4cf9f28134653"},
-    {file = "protobuf-4.24.0-cp38-cp38-win_amd64.whl", hash = "sha256:8bb52a2be32db82ddc623aefcedfe1e0eb51da60e18fcc908fb8885c81d72109"},
-    {file = "protobuf-4.24.0-cp39-cp39-win32.whl", hash = "sha256:ae7a1835721086013de193311df858bc12cd247abe4ef9710b715d930b95b33e"},
-    {file = "protobuf-4.24.0-cp39-cp39-win_amd64.whl", hash = "sha256:44825e963008f8ea0d26c51911c30d3e82e122997c3c4568fd0385dd7bacaedf"},
-    {file = "protobuf-4.24.0-py3-none-any.whl", hash = "sha256:82e6e9ebdd15b8200e8423676eab38b774624d6a1ad696a60d86a2ac93f18201"},
-    {file = "protobuf-4.24.0.tar.gz", hash = "sha256:5d0ceb9de6e08311832169e601d1fc71bd8e8c779f3ee38a97a78554945ecb85"},
+    {file = "protobuf-3.20.3-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:f4bd856d702e5b0d96a00ec6b307b0f51c1982c2bf9c0052cf9019e9a544ba99"},
+    {file = "protobuf-3.20.3-cp310-cp310-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:9aae4406ea63d825636cc11ffb34ad3379335803216ee3a856787bcf5ccc751e"},
+    {file = "protobuf-3.20.3-cp310-cp310-win32.whl", hash = "sha256:28545383d61f55b57cf4df63eebd9827754fd2dc25f80c5253f9184235db242c"},
+    {file = "protobuf-3.20.3-cp310-cp310-win_amd64.whl", hash = "sha256:67a3598f0a2dcbc58d02dd1928544e7d88f764b47d4a286202913f0b2801c2e7"},
+    {file = "protobuf-3.20.3-cp36-cp36m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:899dc660cd599d7352d6f10d83c95df430a38b410c1b66b407a6b29265d66469"},
+    {file = "protobuf-3.20.3-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:e64857f395505ebf3d2569935506ae0dfc4a15cb80dc25261176c784662cdcc4"},
+    {file = "protobuf-3.20.3-cp37-cp37m-manylinux2014_aarch64.whl", hash = "sha256:d9e4432ff660d67d775c66ac42a67cf2453c27cb4d738fc22cb53b5d84c135d4"},
+    {file = "protobuf-3.20.3-cp37-cp37m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:74480f79a023f90dc6e18febbf7b8bac7508420f2006fabd512013c0c238f454"},
+    {file = "protobuf-3.20.3-cp37-cp37m-win32.whl", hash = "sha256:b6cc7ba72a8850621bfec987cb72623e703b7fe2b9127a161ce61e61558ad905"},
+    {file = "protobuf-3.20.3-cp37-cp37m-win_amd64.whl", hash = "sha256:8c0c984a1b8fef4086329ff8dd19ac77576b384079247c770f29cc8ce3afa06c"},
+    {file = "protobuf-3.20.3-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:de78575669dddf6099a8a0f46a27e82a1783c557ccc38ee620ed8cc96d3be7d7"},
+    {file = "protobuf-3.20.3-cp38-cp38-manylinux2014_aarch64.whl", hash = "sha256:f4c42102bc82a51108e449cbb32b19b180022941c727bac0cfd50170341f16ee"},
+    {file = "protobuf-3.20.3-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:44246bab5dd4b7fbd3c0c80b6f16686808fab0e4aca819ade6e8d294a29c7050"},
+    {file = "protobuf-3.20.3-cp38-cp38-win32.whl", hash = "sha256:c02ce36ec760252242a33967d51c289fd0e1c0e6e5cc9397e2279177716add86"},
+    {file = "protobuf-3.20.3-cp38-cp38-win_amd64.whl", hash = "sha256:447d43819997825d4e71bf5769d869b968ce96848b6479397e29fc24c4a5dfe9"},
+    {file = "protobuf-3.20.3-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:398a9e0c3eaceb34ec1aee71894ca3299605fa8e761544934378bbc6c97de23b"},
+    {file = "protobuf-3.20.3-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:bf01b5720be110540be4286e791db73f84a2b721072a3711efff6c324cdf074b"},
+    {file = "protobuf-3.20.3-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:daa564862dd0d39c00f8086f88700fdbe8bc717e993a21e90711acfed02f2402"},
+    {file = "protobuf-3.20.3-cp39-cp39-win32.whl", hash = "sha256:819559cafa1a373b7096a482b504ae8a857c89593cf3a25af743ac9ecbd23480"},
+    {file = "protobuf-3.20.3-cp39-cp39-win_amd64.whl", hash = "sha256:03038ac1cfbc41aa21f6afcbcd357281d7521b4157926f30ebecc8d4ea59dcb7"},
+    {file = "protobuf-3.20.3-py2.py3-none-any.whl", hash = "sha256:a7ca6d488aa8ff7f329d4c545b2dbad8ac31464f1d8b1c87ad1346717731e4db"},
+    {file = "protobuf-3.20.3.tar.gz", hash = "sha256:2e3427429c9cffebf259491be0af70189607f365c2f41c7c3764af6f337105f2"},
 ]
 
 [[package]]
@@ -4034,6 +4094,25 @@ files = [
 doc = ["reno", "sphinx", "tornado (>=4.5)"]
 
 [[package]]
+name = "thrift"
+version = "0.16.0"
+description = "Python bindings for the Apache Thrift RPC system"
+category = "dev"
+optional = false
+python-versions = "*"
+files = [
+    {file = "thrift-0.16.0.tar.gz", hash = "sha256:2b5b6488fcded21f9d312aa23c9ff6a0195d0f6ae26ddbd5ad9e3e25dfc14408"},
+]
+
+[package.dependencies]
+six = ">=1.7.2"
+
+[package.extras]
+all = ["tornado (>=4.0)", "twisted"]
+tornado = ["tornado (>=4.0)"]
+twisted = ["twisted"]
+
+[[package]]
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
@@ -4617,4 +4696,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "0ac9593cefa705cae893b3ac03007fffaef480a07049d72e526440ee0823be4c"
+content-hash = "7b4bac6d11c51a275f9b2094cf26e159f58a975809c83a61ebf4e333911e4ff2"

@@ -2,18 +2,18 @@ import os
 
 from dotenv import load_dotenv
 
-import autogpt.monitoring
+load_dotenv()
+import autogpt.forge_log
 
-# For logging to work, it needs to be intitialised prior to importing the other modules
+ENABLE_TRACING = os.environ.get("ENABLE_TRACING", "false").lower() == "true"
+
+autogpt.forge_log.setup_logger()
 
 
-autogpt.monitoring.setup_logger()
-
-LOG = autogpt.monitoring.CustomLogger(__name__)
+LOG = autogpt.forge_log.CustomLogger(__name__)
 
 if __name__ == "__main__":
     """Runs the agent server"""
-    load_dotenv()
 
     # modules are imported here so that logging is setup first
     import autogpt.agent
