@@ -28,11 +28,29 @@ from fastapi import APIRouter, Query, Request, Response, UploadFile
 from fastapi.responses import FileResponse
 
 from autogpt.schema import Artifact, Step, StepRequestBody, Task, TaskRequestBody
+from autogpt.tracing import tracing
 
 base_router = APIRouter()
 
 
+@base_router.get("/", tags=["root"])
+async def root():
+    """
+    Root endpoint that returns a welcome message.
+    """
+    return Response(content="Welcome to the Auto-GPT Forge")
+
+
+@base_router.get("/heartbeat", tags=["server"])
+async def check_server_status():
+    """
+    Check if the server is running.
+    """
+    return Response(content="Server is running.", status_code=200)
+
+
 @base_router.post("/agent/tasks", tags=["agent"], response_model=Task)
+@tracing("Creating new task", is_create_task=True)
 async def create_agent_task(request: Request, task_request: TaskRequestBody) -> Task:
     """
     Creates a new task using the provided TaskRequestBody and returns a Task.
@@ -61,6 +79,7 @@ async def create_agent_task(request: Request, task_request: TaskRequestBody) -> 
             }
     """
     agent = request["agent"]
+
     if task_request := await agent.create_task(task_request):
         return task_request
     else:
@@ -113,6 +132,7 @@ async def list_agent_tasks(
 
 
 @base_router.get("/agent/tasks/{task_id}", tags=["agent"], response_model=Task)
+@tracing("Getting task details")
 async def get_agent_task(request: Request, task_id: str):
     """
     Gets the details of a task by ID.
@@ -220,6 +240,7 @@ async def list_agent_task_steps(
 
 
 @base_router.post("/agent/tasks/{task_id}/steps", tags=["agent"], response_model=Step)
+@tracing("Creating and executing Step")
 async def execute_agent_task_step(
     request: Request, task_id: str, step: StepRequestBody
 ) -> Step:
@@ -269,6 +290,7 @@ async def execute_agent_task_step(
 @base_router.get(
     "/agent/tasks/{task_id}/steps/{step_id}", tags=["agent"], response_model=Step
 )
+@tracing("Getting Step Details")
 async def get_agent_task_step(request: Request, task_id: str, step_id: str) -> Step:
     """
     Retrieves the details of a specific step for a given task.
@@ -299,6 +321,7 @@ async def get_agent_task_step(request: Request, task_id: str, step_id: str) -> S
 @base_router.get(
     "/agent/tasks/{task_id}/artifacts", tags=["agent"], response_model=Dict[str, Any]
 )
+@tracing("Listing Task Artifacts")
 async def list_agent_task_artifacts(
     request: Request,
     task_id: str,
@@ -343,6 +366,7 @@ async def list_agent_task_artifacts(
 @base_router.post(
     "/agent/tasks/{task_id}/artifacts", tags=["agent"], response_model=Artifact
 )
+@tracing("Uploading task artifact")
 async def upload_agent_task_artifacts(
     request: Request,
     task_id: str,
@@ -389,6 +413,7 @@ async def upload_agent_task_artifacts(
 @base_router.get(
     "/agent/tasks/{task_id}/artifacts/{artifact_id}", tags=["agent"], response_model=str
 )
+@tracing("Downloading task artifact")
 async def download_agent_task_artifact(
     request: Request, task_id: str, artifact_id: str
 ) -> FileResponse:
@@ -411,5 +436,4 @@ async def download_agent_task_artifact(
             <file_content_of_artifact>
     """
     agent = request["agent"]
-    print(f"task_id: {task_id}, artifact_id: {artifact_id}")
     return await agent.get_artifact(task_id, artifact_id)
