@@ -2,8 +2,8 @@
 name = "Auto-GPT-Forge"
 version = "0.1.0"
 description = ""
-authors = []
-
+authors = ["Craig Swift <craigswift13@gmail.com>"]
+license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]

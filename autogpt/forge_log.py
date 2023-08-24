@@ -6,7 +6,7 @@ import os
 import queue
 
 ENABLE_TRACING = os.environ.get("ENABLE_TRACING", "false").lower() == "true"
-
+JSON_LOGGING = os.environ.get("JSON_LOGGING", "false").lower() == "true"
 
 CHAT = 29
 logging.addLevelName(CHAT, "CHAT")
@@ -42,6 +42,11 @@ KEYWORD_COLORS: dict[str, str] = {
     "ERROR": ORANGE,
     "CRITICAL": RED,
 }
+
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record):
+        return json.dumps(record.__dict__)
 
 
 def formatter_message(message: str, use_color: bool = True) -> str:
@@ -118,27 +123,38 @@ class CustomLogger(logging.Logger):
         queue_handler.setFormatter(json_formatter)
         self.addHandler(queue_handler)
 
-        console_formatter = ConsoleFormatter(self.COLOR_FORMAT)
+        if JSON_LOGGING:
+            console_formatter = JsonFormatter()
+        else:
+            console_formatter = ConsoleFormatter(self.COLOR_FORMAT)
         console = logging.StreamHandler()
         console.setFormatter(console_formatter)
         self.addHandler(console)
 
-    def chat(self, role: str, openai_repsonse: dict, *args, **kws):
+    def chat(self, role: str, openai_repsonse: dict, messages=None, *args, **kws):
         """
         Parse the content, log the message and extract the usage into prometheus metrics
         """
+        role_emojis = {
+            "system": "🖥️",
+            "user": "👤",
+            "assistant": "🤖",
+            "function": "⚙️",
+        }
         if self.isEnabledFor(CHAT):
-            response = json.loads(openai_repsonse)
-            role_emojis = {
-                "system": "🖥️",
-                "user": "👤",
-                "assistant": "🤖",
-                "function": "⚙️",
-            }
-            self._log(
-                CHAT,
-                f"{role_emojis.get(role, '🔵')}: {response['choices'][0]['message']['content']}",
-            )
+            if messages:
+                for message in messages:
+                    self._log(
+                        CHAT,
+                        f"{role_emojis.get(message['role'], '🔵')}: {message['content']}",
+                    )
+            else:
+                response = json.loads(openai_repsonse)
+
+                self._log(
+                    CHAT,
+                    f"{role_emojis.get(role, '🔵')}: {response['choices'][0]['message']['content']}",
+                )
 
 
 class QueueLogger(logging.Logger):

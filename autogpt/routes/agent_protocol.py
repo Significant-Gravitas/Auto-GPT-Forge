@@ -436,5 +436,4 @@ async def download_agent_task_artifact(
             <file_content_of_artifact>
     """
     agent = request["agent"]
-    print(f"task_id: {task_id}, artifact_id: {artifact_id}")
     return await agent.get_artifact(task_id, artifact_id)

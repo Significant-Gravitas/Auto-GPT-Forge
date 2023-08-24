@@ -4,16 +4,16 @@ It uses SQLite as the database and file store backend.
 IT IS NOT ADVISED TO USE THIS IN PRODUCTION!
 """
 
-import logging
 import math
 from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, create_engine
 from sqlalchemy.orm import DeclarativeBase, joinedload, relationship, sessionmaker
 
+from .forge_log import CustomLogger
 from .schema import Artifact, Pagination, Status, Step, Task, TaskInput
 
-LOG = logging.getLogger(__name__)
+LOG = CustomLogger(__name__)
 
 
 class Base(DeclarativeBase):
@@ -156,7 +156,6 @@ class AgentDB:
                 LOG.debug(f"Created new step with step_id: {new_step.step_id}")
         except Exception as e:
             LOG.error(f"Error while creating step: {e}")
-            print(e)
         return convert_to_step(new_step, self.debug_enabled)
 
     async def create_artifact(

@@ -49,8 +49,9 @@ class Agent:
         app.add_middleware(AgentMiddleware, agent=self)
         setup_tracing(app)
         config.loglevel = "ERROR"
+        config.bind = [f"0.0.0.0:{port}"]
 
-        LOG.info(f"Agent server starting on http://127.0.0.1:{port}")
+        LOG.info(f"Agent server starting on {config.bind}")
         asyncio.run(serve(app, config))
 
     async def create_task(self, task_request: TaskRequestBody) -> Task:
@@ -64,10 +65,9 @@ class Agent:
                 if task_request.additional_input
                 else None,
             )
-            print(task)
+            LOG.info(task.json())
         except Exception as e:
             return Response(status_code=500, content=str(e))
-        print(task)
         return task
 
     async def list_tasks(
