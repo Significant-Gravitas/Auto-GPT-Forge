@@ -1,8 +1,7 @@
 import asyncio
 import os
-import typing
 
-from fastapi import APIRouter, FastAPI, Response, UploadFile
+from fastapi import APIRouter, FastAPI, HTTPException, Response, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
@@ -12,7 +11,7 @@ from .db import AgentDB
 from .forge_log import CustomLogger
 from .middlewares import AgentMiddleware
 from .routes.agent_protocol import base_router
-from .schema import Artifact, Status, Step, StepRequestBody, Task, TaskRequestBody
+from .schema import *
 from .tracing import setup_tracing
 from .utils import run
 from .workspace import Workspace, load_from_uri
@@ -70,20 +69,16 @@ class Agent:
             return Response(status_code=500, content=str(e))
         return task
 
-    async def list_tasks(
-        self, page: int = 1, pageSize: int = 10
-    ) -> typing.Dict[str, typing.Any]:
+    async def list_tasks(self, page: int = 1, pageSize: int = 10) -> TaskListResponse:
         """
         List all tasks that the agent has created.
         """
         try:
             tasks, pagination = await self.db.list_tasks(page, pageSize)
-            tasks = [task.dict() for task in tasks]
+            response = TaskListResponse(tasks=tasks, pagination=pagination)
+            return Response(content=response.json(), media_type="application/json")
         except Exception as e:
-            return Response(status_code=500, content=str(e))
-        return JSONResponse(
-            content={"items": tasks, "pagination": pagination.dict()}, status_code=200
-        )
+            raise HTTPException(status_code=500, detail=str(e))
 
     async def get_task(self, task_id: str) -> Task:
         """
@@ -101,7 +96,7 @@ class Agent:
 
     async def list_steps(
         self, task_id: str, page: int = 1, pageSize: int = 10
-    ) -> typing.Dict[str, typing.Any]:
+    ) -> TaskStepsListResponse:
         """
         List the IDs of all steps that the task has created.
         """
@@ -111,10 +106,10 @@ class Agent:
             return Response(status_code=400, content="Task ID must be a string.")
         try:
             steps, pagination = await self.db.list_steps(task_id, page, pageSize)
-            steps_ids = [step.step_id for step in steps]
+            response = TaskStepsListResponse(steps=steps, pagination=pagination)
+            return Response(content=response.json(), media_type="application/json")
         except Exception as e:
-            return Response(status_code=500, content=str(e))
-        return {"items": steps_ids, "pagination": pagination.dict()}
+            raise HTTPException(status_code=500, detail=str(e))
 
     async def create_and_execute_step(
         self, task_id: str, step_request: StepRequestBody
@@ -157,7 +152,7 @@ class Agent:
             step.output = "No more steps to run."
             # The step is the last step on this page so checking if this is the
             # last page is sufficent to know if it is the last step
-            step.is_last = steps_pagination.current == steps_pagination.pages
+            step.is_last = steps_pagination.current_page == steps_pagination.total_pages
         if isinstance(step.status, Status):
             step.status = step.status.value
         step.output = "Done some work"
@@ -183,7 +178,7 @@ class Agent:
 
     async def list_artifacts(
         self, task_id: str, page: int = 1, pageSize: int = 10
-    ) -> typing.Dict[str, typing.Any]:
+    ) -> TaskArtifactsListResponse:
         """
         List the artifacts that the task has created.
         """
@@ -196,11 +191,9 @@ class Agent:
                 task_id, page, pageSize
             )
         except Exception as e:
-            return Response(status_code=500, content=str(e))
-        return JSONResponse(
-            content={"items": artifacts, "pagination": pagination.dict()},
-            status_code=200,
-        )
+            raise HTTPException(status_code=500, detail=str(e))
+        response = TaskArtifactsListResponse(artifacts=artifacts, pagination=pagination)
+        return Response(content=response.json(), media_type="application/json")
 
     async def create_artifact(
         self,

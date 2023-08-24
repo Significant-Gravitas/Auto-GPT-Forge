@@ -65,11 +65,21 @@ class ArtifactModel(Base):
 def convert_to_task(task_obj: TaskModel, debug_enabled: bool = False) -> Task:
     if debug_enabled:
         LOG.debug(f"Converting TaskModel to Task for task_id: {task_obj.task_id}")
+    task_artifacts = [
+        Artifact(
+            artifact_id=artifact.artifact_id,
+            file_name=artifact.file_name,
+            agent_created=artifact.agent_created,
+            uri=artifact.uri,
+        )
+        for artifact in task_obj.artifacts
+        if artifact.task_id == task_obj.task_id
+    ]
     return Task(
         task_id=task_obj.task_id,
         input=task_obj.input,
         additional_input=task_obj.additional_input,
-        artifacts=[],
+        artifacts=task_artifacts,
     )
 
 
@@ -132,8 +142,7 @@ class AgentDB:
     async def create_step(
         self,
         task_id: str,
-        name: Optional[str] = None,
-        input: Optional[str] = None,
+        input: str,
         is_last: bool = False,
         additional_properties: Optional[Dict[str, str]] = None,
     ) -> Step:
@@ -143,7 +152,7 @@ class AgentDB:
             session = self.Session()
             new_step = StepModel(
                 task_id=task_id,
-                name=name,
+                name=input,
                 input=input,
                 status="created",
                 is_last=is_last,
@@ -267,11 +276,11 @@ class AgentDB:
         session = self.Session()
         if artifact_model := (
             session.query(ArtifactModel)
-            .filter_by(task_id=task_id, artifact_id=artifact_id)
+            .filter_by(task_id=int(task_id), artifact_id=int(artifact_id))
             .first()
         ):
             return Artifact(
-                artifact_id=str(artifact_model.artifact_id),  # Casting to string
+                artifact_id=artifact_model.artifact_id,  # Casting to string
                 file_name=artifact_model.file_name,
                 agent_created=artifact_model.agent_created,
                 uri=artifact_model.uri,
@@ -294,18 +303,9 @@ class AgentDB:
         total = session.query(TaskModel).count()
         pages = math.ceil(total / per_page)
         pagination = Pagination(
-            total=total, pages=pages, current=page, pageSize=per_page
+            total_items=total, total_pages=pages, current_page=page, page_size=per_page
         )
-        return [
-            Task(
-                task_id=task.task_id,
-                input=task.input,
-                additional_input=task.additional_input,
-                artifacts=[],
-                steps=[],
-            )
-            for task in tasks
-        ], pagination
+        return [convert_to_task(task, self.debug_enabled) for task in tasks], pagination
 
     async def list_steps(
         self, task_id: str, page: int = 1, per_page: int = 10
@@ -323,17 +323,9 @@ class AgentDB:
         total = session.query(StepModel).filter_by(task_id=task_id).count()
         pages = math.ceil(total / per_page)
         pagination = Pagination(
-            total=total, pages=pages, current=page, pageSize=per_page
+            total_items=total, total_pages=pages, current_page=page, page_size=per_page
         )
-        return [
-            Step(
-                task_id=task_id,
-                step_id=step.step_id,
-                name=step.name,
-                status=step.status,
-            )
-            for step in steps
-        ], pagination
+        return [convert_to_step(step, self.debug_enabled) for step in steps], pagination
 
     async def list_artifacts(
         self, task_id: str, page: int = 1, per_page: int = 10
@@ -351,7 +343,10 @@ class AgentDB:
             total = session.query(ArtifactModel).filter_by(task_id=task_id).count()
             pages = math.ceil(total / per_page)
             pagination = Pagination(
-                total=total, pages=pages, current=page, pageSize=per_page
+                total_items=total,
+                total_pages=pages,
+                current_page=page,
+                page_size=per_page,
             )
             return [
                 Artifact(

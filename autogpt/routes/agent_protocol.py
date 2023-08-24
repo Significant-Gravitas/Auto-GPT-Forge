@@ -22,12 +22,12 @@ the ones that require special attention due to their complexity are:
 Developers and contributors should be especially careful when making modifications to these routes to ensure 
 consistency and correctness in the system's behavior.
 """
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Query, Request, Response, UploadFile
 from fastapi.responses import FileResponse
 
-from autogpt.schema import Artifact, Step, StepRequestBody, Task, TaskRequestBody
+from autogpt.schema import *
 from autogpt.tracing import tracing
 
 base_router = APIRouter()
@@ -86,28 +86,28 @@ async def create_agent_task(request: Request, task_request: TaskRequestBody) -> 
         return Response(content={"error": "Task creation failed"}, status_code=400)
 
 
-@base_router.get("/agent/tasks", tags=["agent"], response_model=Dict[str, Any])
+@base_router.get("/agent/tasks", tags=["agent"], response_model=TaskListResponse)
 async def list_agent_tasks(
     request: Request,
     page: Optional[int] = Query(1, ge=1),
     page_size: Optional[int] = Query(10, ge=1, alias="pageSize"),
-) -> Dict[str, Any]:
+) -> TaskListResponse:
     """
-    Gets a list of all tasks.
+    Retrieves a paginated list of all tasks.
 
     Args:
         request (Request): FastAPI request object.
         page (int, optional): The page number for pagination. Defaults to 1.
-        page_size (int, optional): The number of items per page for pagination. Defaults to 10.
+        page_size (int, optional): The number of tasks per page for pagination. Defaults to 10.
 
     Returns:
-        Dict[str, Any]: A dictionary containing a list of all tasks and pagination details.
+        TaskListResponse: A response object containing a list of tasks and pagination details.
 
     Example:
         Request:
             GET /agent/tasks?page=1&pageSize=10
 
-        Response:
+        Response (TaskListResponse defined in schema.py):
             {
                 "items": [
                     {
@@ -133,7 +133,7 @@ async def list_agent_tasks(
 
 @base_router.get("/agent/tasks/{task_id}", tags=["agent"], response_model=Task)
 @tracing("Getting task details")
-async def get_agent_task(request: Request, task_id: str):
+async def get_agent_task(request: Request, task_id: str) -> Task:
     """
     Gets the details of a task by ID.
 
@@ -193,31 +193,31 @@ async def get_agent_task(request: Request, task_id: str):
 
 
 @base_router.get(
-    "/agent/tasks/{task_id}/steps", tags=["agent"], response_model=Dict[str, Any]
+    "/agent/tasks/{task_id}/steps", tags=["agent"], response_model=TaskStepsListResponse
 )
 async def list_agent_task_steps(
     request: Request,
     task_id: str,
     page: Optional[int] = Query(1, ge=1),
     page_size: Optional[int] = Query(10, ge=1, alias="pageSize"),
-) -> Dict[str, Any]:
+) -> TaskStepsListResponse:
     """
-    Retrieves a list of steps associated with a specific task.
+    Retrieves a paginated list of steps associated with a specific task.
 
     Args:
         request (Request): FastAPI request object.
         task_id (str): The ID of the task.
         page (int, optional): The page number for pagination. Defaults to 1.
-        page_size (int, optional): The number of items per page for pagination. Defaults to 10.
+        page_size (int, optional): The number of steps per page for pagination. Defaults to 10.
 
     Returns:
-        Dict[str, Any]: A dictionary containing a list of all steps and pagination details.
+        TaskStepsListResponse: A response object containing a list of steps and pagination details.
 
     Example:
         Request:
             GET /agent/tasks/50da533e-3904-4401-8a07-c49adf88b5eb/steps?page=1&pageSize=10
 
-        Response:
+        Response (TaskStepsListResponse defined in schema.py):
             {
                 "items": [
                     {
@@ -319,7 +319,9 @@ async def get_agent_task_step(request: Request, task_id: str, step_id: str) -> S
 
 
 @base_router.get(
-    "/agent/tasks/{task_id}/artifacts", tags=["agent"], response_model=Dict[str, Any]
+    "/agent/tasks/{task_id}/artifacts",
+    tags=["agent"],
+    response_model=TaskArtifactsListResponse,
 )
 @tracing("Listing Task Artifacts")
 async def list_agent_task_artifacts(
@@ -327,9 +329,9 @@ async def list_agent_task_artifacts(
     task_id: str,
     page: Optional[int] = Query(1, ge=1),
     page_size: Optional[int] = Query(10, ge=1, alias="pageSize"),
-) -> Dict[str, Any]:
+) -> TaskArtifactsListResponse:
     """
-    Retrieves a list of artifacts associated with a specific task.
+    Retrieves a paginated list of artifacts associated with a specific task.
 
     Args:
         request (Request): FastAPI request object.
@@ -338,13 +340,13 @@ async def list_agent_task_artifacts(
         page_size (int, optional): The number of items per page for pagination. Defaults to 10.
 
     Returns:
-        Dict[str, Any]: A dictionary containing a list of all artifacts and pagination details.
+        TaskArtifactsListResponse: A response object containing a list of artifacts and pagination details.
 
     Example:
         Request:
             GET /agent/tasks/50da533e-3904-4401-8a07-c49adf88b5eb/artifacts?page=1&pageSize=10
 
-        Response:
+        Response (TaskArtifactsListResponse defined in schema.py):
             {
                 "items": [
                     {"artifact_id": "artifact1_id", ...},
