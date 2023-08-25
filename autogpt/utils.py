@@ -51,6 +51,7 @@ def run(task: str):
     LOG.info("Running agent")
     steps = plan(task)
     execute_plan(steps)
+    workspace = os.path.join(workspace)
     # check for artifacts in workspace
     items = glob.glob(os.path.join(workspace, "*"))
     if items:

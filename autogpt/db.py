@@ -135,8 +135,9 @@ class AgentDB:
     ) -> Task:
         if self.debug_enabled:
             LOG.debug("Creating new task")
-        with self.Session() as session:
-            try:
+
+        try:
+            with self.Session() as session:
                 new_task = TaskModel(
                     task_id=str(uuid.uuid4()),
                     input=input,
@@ -150,12 +151,14 @@ class AgentDB:
                 if self.debug_enabled:
                     LOG.debug(f"Created new task with task_id: {new_task.task_id}")
                 return convert_to_task(new_task, self.debug_enabled)
-            except SQLAlchemyError as e:
-                LOG.error(f"SQLAlchemy error while creating task: {e}")
-                raise
-            except Exception as e:
-                LOG.error(f"Unexpected error while creating task: {e}")
-                raise
+        except SQLAlchemyError as e:
+            LOG.error(f"SQLAlchemy error while creating task: {e}")
+            raise
+        except NotFoundError as e:
+            raise
+        except Exception as e:
+            LOG.error(f"Unexpected error while creating task: {e}")
+            raise
 
     async def create_step(
         self,
@@ -167,24 +170,26 @@ class AgentDB:
         if self.debug_enabled:
             LOG.debug(f"Creating new step for task_id: {task_id}")
         try:
-            session = self.Session()
-            new_step = StepModel(
-                task_id=task_id,
-                step_id=str(uuid.uuid4()),
-                name=input,
-                input=input,
-                status="created",
-                is_last=is_last,
-                additional_properties=additional_properties,
-            )
-            session.add(new_step)
-            session.commit()
-            session.refresh(new_step)
-            if self.debug_enabled:
-                LOG.debug(f"Created new step with step_id: {new_step.step_id}")
-            return convert_to_step(new_step, self.debug_enabled)
+            with self.Session() as session:
+                new_step = StepModel(
+                    task_id=task_id,
+                    step_id=str(uuid.uuid4()),
+                    name=input,
+                    input=input,
+                    status="created",
+                    is_last=is_last,
+                    additional_properties=additional_properties,
+                )
+                session.add(new_step)
+                session.commit()
+                session.refresh(new_step)
+                if self.debug_enabled:
+                    LOG.debug(f"Created new step with step_id: {new_step.step_id}")
+                return convert_to_step(new_step, self.debug_enabled)
         except SQLAlchemyError as e:
             LOG.error(f"SQLAlchemy error while creating step: {e}")
+            raise
+        except NotFoundError as e:
             raise
         except Exception as e:
             LOG.error(f"Unexpected error while creating step: {e}")
@@ -201,35 +206,37 @@ class AgentDB:
         if self.debug_enabled:
             LOG.debug(f"Creating new artifact for task_id: {task_id}")
         try:
-            session = self.Session()
-            if (
-                existing_artifact := session.query(ArtifactModel)
-                .filter_by(uri=uri)
-                .first()
-            ):
-                session.close()
-                if self.debug_enabled:
-                    LOG.debug(f"Artifact already exists with uri: {uri}")
-                return convert_to_artifact(existing_artifact)
+            with self.Session() as session:
+                if (
+                    existing_artifact := session.query(ArtifactModel)
+                    .filter_by(uri=uri)
+                    .first()
+                ):
+                    session.close()
+                    if self.debug_enabled:
+                        LOG.debug(f"Artifact already exists with uri: {uri}")
+                    return convert_to_artifact(existing_artifact)
 
-            new_artifact = ArtifactModel(
-                artifact_id=str(uuid.uuid4()),
-                task_id=task_id,
-                step_id=step_id,
-                agent_created=agent_created,
-                file_name=file_name,
-                uri=uri,
-            )
-            session.add(new_artifact)
-            session.commit()
-            session.refresh(new_artifact)
-            if self.debug_enabled:
-                LOG.debug(
-                    f"Created new artifact with artifact_id: {new_artifact.artifact_id}"
+                new_artifact = ArtifactModel(
+                    artifact_id=str(uuid.uuid4()),
+                    task_id=task_id,
+                    step_id=step_id,
+                    agent_created=agent_created,
+                    file_name=file_name,
+                    uri=uri,
                 )
-            return convert_to_artifact(new_artifact)
+                session.add(new_artifact)
+                session.commit()
+                session.refresh(new_artifact)
+                if self.debug_enabled:
+                    LOG.debug(
+                        f"Created new artifact with artifact_id: {new_artifact.artifact_id}"
+                    )
+                return convert_to_artifact(new_artifact)
         except SQLAlchemyError as e:
             LOG.error(f"SQLAlchemy error while creating step: {e}")
+            raise
+        except NotFoundError as e:
             raise
         except Exception as e:
             LOG.error(f"Unexpected error while creating step: {e}")
@@ -239,20 +246,22 @@ class AgentDB:
         """Get a task by its id"""
         if self.debug_enabled:
             LOG.debug(f"Getting task with task_id: {task_id}")
-        session = self.Session()
         try:
-            if task_obj := (
-                session.query(TaskModel)
-                .options(joinedload(TaskModel.artifacts))
-                .filter_by(task_id=task_id)
-                .first()
-            ):
-                return convert_to_task(task_obj, self.debug_enabled)
-            else:
-                LOG.error(f"Task not found with task_id: {task_id}")
-                raise NotFoundError("Task not found")
+            with self.Session() as session:
+                if task_obj := (
+                    session.query(TaskModel)
+                    .options(joinedload(TaskModel.artifacts))
+                    .filter_by(task_id=task_id)
+                    .first()
+                ):
+                    return convert_to_task(task_obj, self.debug_enabled)
+                else:
+                    LOG.error(f"Task not found with task_id: {task_id}")
+                    raise NotFoundError("Task not found")
         except SQLAlchemyError as e:
             LOG.error(f"SQLAlchemy error while getting task: {e}")
+            raise
+        except NotFoundError as e:
             raise
         except Exception as e:
             LOG.error(f"Unexpected error while getting task: {e}")
@@ -262,22 +271,24 @@ class AgentDB:
         if self.debug_enabled:
             LOG.debug(f"Getting step with task_id: {task_id} and step_id: {step_id}")
         try:
-            session = self.Session()
-            if step := (
-                session.query(StepModel)
-                .options(joinedload(StepModel.artifacts))
-                .filter(StepModel.step_id == step_id)
-                .first()
-            ):
-                return convert_to_step(step, self.debug_enabled)
+            with self.Session() as session:
+                if step := (
+                    session.query(StepModel)
+                    .options(joinedload(StepModel.artifacts))
+                    .filter(StepModel.step_id == step_id)
+                    .first()
+                ):
+                    return convert_to_step(step, self.debug_enabled)
 
-            else:
-                LOG.error(
-                    f"Step not found with task_id: {task_id} and step_id: {step_id}"
-                )
-                raise NotFoundError("Step not found")
+                else:
+                    LOG.error(
+                        f"Step not found with task_id: {task_id} and step_id: {step_id}"
+                    )
+                    raise NotFoundError("Step not found")
         except SQLAlchemyError as e:
             LOG.error(f"SQLAlchemy error while getting step: {e}")
+            raise
+        except NotFoundError as e:
             raise
         except Exception as e:
             LOG.error(f"Unexpected error while getting step: {e}")
@@ -293,23 +304,25 @@ class AgentDB:
         if self.debug_enabled:
             LOG.debug(f"Updating step with task_id: {task_id} and step_id: {step_id}")
         try:
-            session = self.Session()
-            if (
-                step := session.query(StepModel)
-                .filter_by(task_id=task_id, step_id=step_id)
-                .first()
-            ):
-                step.status = status
-                step.additional_properties = additional_properties
-                session.commit()
-                return await self.get_step(task_id, step_id)
-            else:
-                LOG.error(
-                    f"Step not found for update with task_id: {task_id} and step_id: {step_id}"
-                )
-                raise NotFoundError("Step not found")
+            with self.Session() as session:
+                if (
+                    step := session.query(StepModel)
+                    .filter_by(task_id=task_id, step_id=step_id)
+                    .first()
+                ):
+                    step.status = status
+                    step.additional_properties = additional_properties
+                    session.commit()
+                    return await self.get_step(task_id, step_id)
+                else:
+                    LOG.error(
+                        f"Step not found for update with task_id: {task_id} and step_id: {step_id}"
+                    )
+                    raise NotFoundError("Step not found")
         except SQLAlchemyError as e:
             LOG.error(f"SQLAlchemy error while getting step: {e}")
+            raise
+        except NotFoundError as e:
             raise
         except Exception as e:
             LOG.error(f"Unexpected error while getting step: {e}")
@@ -319,18 +332,20 @@ class AgentDB:
         if self.debug_enabled:
             LOG.debug(f"Getting artifact with and artifact_id: {artifact_id}")
         try:
-            session = self.Session()
-            if (
-                artifact_model := session.query(ArtifactModel)
-                .filter_by(artifact_id=artifact_id)
-                .first()
-            ):
-                return convert_to_artifact(artifact_model)
-            else:
-                LOG.error(f"Artifact not found with and artifact_id: {artifact_id}")
-                raise NotFoundError("Artifact not found")
+            with self.Session() as session:
+                if (
+                    artifact_model := session.query(ArtifactModel)
+                    .filter_by(artifact_id=artifact_id)
+                    .first()
+                ):
+                    return convert_to_artifact(artifact_model)
+                else:
+                    LOG.error(f"Artifact not found with and artifact_id: {artifact_id}")
+                    raise NotFoundError("Artifact not found")
         except SQLAlchemyError as e:
             LOG.error(f"SQLAlchemy error while getting artifact: {e}")
+            raise
+        except NotFoundError as e:
             raise
         except Exception as e:
             LOG.error(f"Unexpected error while getting artifact: {e}")
@@ -341,29 +356,31 @@ class AgentDB:
     ) -> Tuple[List[Task], Pagination]:
         if self.debug_enabled:
             LOG.debug("Listing tasks")
-        session = self.Session()
         try:
-            tasks = (
-                session.query(TaskModel)
-                .offset((page - 1) * per_page)
-                .limit(per_page)
-                .all()
-            )
-            if not tasks:
-                raise NotFoundError("No tasks found")
-            total = session.query(TaskModel).count()
-            pages = math.ceil(total / per_page)
-            pagination = Pagination(
-                total_items=total,
-                total_pages=pages,
-                current_page=page,
-                page_size=per_page,
-            )
-            return [
-                convert_to_task(task, self.debug_enabled) for task in tasks
-            ], pagination
+            with self.Session() as session:
+                tasks = (
+                    session.query(TaskModel)
+                    .offset((page - 1) * per_page)
+                    .limit(per_page)
+                    .all()
+                )
+                if not tasks:
+                    raise NotFoundError("No tasks found")
+                total = session.query(TaskModel).count()
+                pages = math.ceil(total / per_page)
+                pagination = Pagination(
+                    total_items=total,
+                    total_pages=pages,
+                    current_page=page,
+                    page_size=per_page,
+                )
+                return [
+                    convert_to_task(task, self.debug_enabled) for task in tasks
+                ], pagination
         except SQLAlchemyError as e:
             LOG.error(f"SQLAlchemy error while listing tasks: {e}")
+            raise
+        except NotFoundError as e:
             raise
         except Exception as e:
             LOG.error(f"Unexpected error while listing tasks: {e}")
@@ -374,30 +391,32 @@ class AgentDB:
     ) -> Tuple[List[Step], Pagination]:
         if self.debug_enabled:
             LOG.debug(f"Listing steps for task_id: {task_id}")
-        session = self.Session()
         try:
-            steps = (
-                session.query(StepModel)
-                .filter_by(task_id=task_id)
-                .offset((page - 1) * per_page)
-                .limit(per_page)
-                .all()
-            )
-            if not steps:
-                raise NotFoundError("No steps found")
-            total = session.query(StepModel).filter_by(task_id=task_id).count()
-            pages = math.ceil(total / per_page)
-            pagination = Pagination(
-                total_items=total,
-                total_pages=pages,
-                current_page=page,
-                page_size=per_page,
-            )
-            return [
-                convert_to_step(step, self.debug_enabled) for step in steps
-            ], pagination
+            with self.Session() as session:
+                steps = (
+                    session.query(StepModel)
+                    .filter_by(task_id=task_id)
+                    .offset((page - 1) * per_page)
+                    .limit(per_page)
+                    .all()
+                )
+                if not steps:
+                    raise NotFoundError("No steps found")
+                total = session.query(StepModel).filter_by(task_id=task_id).count()
+                pages = math.ceil(total / per_page)
+                pagination = Pagination(
+                    total_items=total,
+                    total_pages=pages,
+                    current_page=page,
+                    page_size=per_page,
+                )
+                return [
+                    convert_to_step(step, self.debug_enabled) for step in steps
+                ], pagination
         except SQLAlchemyError as e:
             LOG.error(f"SQLAlchemy error while listing steps: {e}")
+            raise
+        except NotFoundError as e:
             raise
         except Exception as e:
             LOG.error(f"Unexpected error while listing steps: {e}")
@@ -408,28 +427,32 @@ class AgentDB:
     ) -> Tuple[List[Artifact], Pagination]:
         if self.debug_enabled:
             LOG.debug(f"Listing artifacts for task_id: {task_id}")
-        session = self.Session()
         try:
-            artifacts = (
-                session.query(ArtifactModel)
-                .filter_by(task_id=task_id)
-                .offset((page - 1) * per_page)
-                .limit(per_page)
-                .all()
-            )
-            if not artifacts:
-                raise NotFoundError("No artifacts found")
-            total = session.query(ArtifactModel).filter_by(task_id=task_id).count()
-            pages = math.ceil(total / per_page)
-            pagination = Pagination(
-                total_items=total,
-                total_pages=pages,
-                current_page=page,
-                page_size=per_page,
-            )
-            return [convert_to_artifact(artifact) for artifact in artifacts], pagination
+            with self.Session() as session:
+                artifacts = (
+                    session.query(ArtifactModel)
+                    .filter_by(task_id=task_id)
+                    .offset((page - 1) * per_page)
+                    .limit(per_page)
+                    .all()
+                )
+                if not artifacts:
+                    raise NotFoundError("No artifacts found")
+                total = session.query(ArtifactModel).filter_by(task_id=task_id).count()
+                pages = math.ceil(total / per_page)
+                pagination = Pagination(
+                    total_items=total,
+                    total_pages=pages,
+                    current_page=page,
+                    page_size=per_page,
+                )
+                return [
+                    convert_to_artifact(artifact) for artifact in artifacts
+                ], pagination
         except SQLAlchemyError as e:
             LOG.error(f"SQLAlchemy error while listing artifacts: {e}")
+            raise
+        except NotFoundError as e:
             raise
         except Exception as e:
             LOG.error(f"Unexpected error while listing artifacts: {e}")

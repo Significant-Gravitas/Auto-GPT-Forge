@@ -221,15 +221,16 @@ class Agent:
         try:
             artifact = await self.db.get_artifact(task_id, artifact_id)
             retrieved_artifact = await self.load_from_uri(artifact.uri, artifact_id)
-
-            path = artifact.file_name
-            with open(path, "wb") as f:
-                f.write(retrieved_artifact)
-
-            return FileResponse(
-                # Note: mimetype is guessed in the FileResponse constructor
-                path=path,
-                filename=artifact.file_name,
-            )
         except Exception as e:
             raise
+        path = artifact.file_name
+        try:
+            with open(path, "wb") as f:
+                f.write(retrieved_artifact)
+        except Exception as e:
+            raise
+        return FileResponse(
+            # Note: mimetype is guessed in the FileResponse constructor
+            path=path,
+            filename=artifact.file_name,
+        )

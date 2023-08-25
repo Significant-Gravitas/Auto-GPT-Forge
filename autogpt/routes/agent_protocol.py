@@ -22,6 +22,7 @@ the ones that require special attention due to their complexity are:
 Developers and contributors should be especially careful when making modifications to these routes to ensure 
 consistency and correctness in the system's behavior.
 """
+import json
 from typing import Optional
 
 from fastapi import APIRouter, Query, Request, Response, UploadFile
@@ -82,11 +83,19 @@ async def create_agent_task(request: Request, task_request: TaskRequestBody) -> 
 
     try:
         task_request = await agent.create_task(task_request)
-        return task_request
+        return Response(content=task_request.json(), status_code=201)
     except NotFoundError:
-        return Response(content={"error": "Task not found"}, status_code=404)
+        return Response(
+            content=json.dumps({"error": "Task not found"}),
+            status_code=404,
+            media_type="application/json",
+        )
     except Exception:
-        return Response(content={"error": "Internal server error"}, status_code=500)
+        return Response(
+            content=json.dumps({"error": "Internal server error"}),
+            status_code=500,
+            media_type="application/json",
+        )
 
 
 @base_router.get("/agent/tasks", tags=["agent"], response_model=TaskListResponse)
@@ -132,12 +141,20 @@ async def list_agent_tasks(
     """
     agent = request["agent"]
     try:
-        task_request = await agent.list_tasks(page, page_size)
-        return task_request
+        tasks = await agent.list_tasks(page, page_size)
+        return Response(content=tasks.json(), status_code=200)
     except NotFoundError:
-        return Response(content={"error": "Task not found"}, status_code=404)
+        return Response(
+            content=json.dumps({"error": "Task not found"}),
+            status_code=404,
+            media_type="application/json",
+        )
     except Exception:
-        return Response(content={"error": "Internal server error"}, status_code=500)
+        return Response(
+            content=json.dumps({"error": "Internal server error"}),
+            status_code=500,
+            media_type="application/json",
+        )
 
 
 @base_router.get("/agent/tasks/{task_id}", tags=["agent"], response_model=Task)
@@ -195,12 +212,20 @@ async def get_agent_task(request: Request, task_id: str) -> Task:
     """
     agent = request["agent"]
     try:
-        task_request = await agent.get_task(task_id)
-        return task_request
+        task = await agent.get_task(task_id)
+        return Response(content=task.json(), status_code=200)
     except NotFoundError:
-        return Response(content={"error": "Task not found"}, status_code=404)
+        return Response(
+            content=json.dumps({"error": "Task not found"}),
+            status_code=404,
+            media_type="application/json",
+        )
     except Exception:
-        return Response(content={"error": "Internal server error"}, status_code=500)
+        return Response(
+            content=json.dumps({"error": "Internal server error"}),
+            status_code=500,
+            media_type="application/json",
+        )
 
 
 @base_router.get(
@@ -248,12 +273,20 @@ async def list_agent_task_steps(
     """
     agent = request["agent"]
     try:
-        task_request = await agent.list_steps(task_id, page, page_size)
-        return task_request
+        steps = await agent.list_steps(task_id, page, page_size)
+        return Response(content=steps.json(), status_code=200)
     except NotFoundError:
-        return Response(content={"error": "Task not found"}, status_code=404)
+        return Response(
+            content=json.dumps({"error": "Task not found"}),
+            status_code=404,
+            media_type="application/json",
+        )
     except Exception:
-        return Response(content={"error": "Internal server error"}, status_code=500)
+        return Response(
+            content=json.dumps({"error": "Internal server error"}),
+            status_code=500,
+            media_type="application/json",
+        )
 
 
 @base_router.post("/agent/tasks/{task_id}/steps", tags=["agent"], response_model=Step)
@@ -302,12 +335,20 @@ async def execute_agent_task_step(
     """
     agent = request["agent"]
     try:
-        task_request = await agent.create_and_execute_step(task_id, step)
-        return task_request
+        step = await agent.create_and_execute_step(task_id, step)
+        return Response(content=step.json(), status_code=201)
     except NotFoundError:
-        return Response(content={"error": "Task not found"}, status_code=404)
+        return Response(
+            content=json.dumps({"error": "Task not found"}),
+            status_code=404,
+            media_type="application/json",
+        )
     except Exception:
-        return Response(content={"error": "Internal server error"}, status_code=500)
+        return Response(
+            content=json.dumps({"error": "Internal server error"}),
+            status_code=500,
+            media_type="application/json",
+        )
 
 
 @base_router.get(
@@ -339,12 +380,20 @@ async def get_agent_task_step(request: Request, task_id: str, step_id: str) -> S
     """
     agent = request["agent"]
     try:
-        task_request = await agent.get_step(task_id, step_id)
-        return task_request
+        step = await agent.get_step(task_id, step_id)
+        return Response(content=step.json(), status_code=200)
     except NotFoundError:
-        return Response(content={"error": "Task not found"}, status_code=404)
+        return Response(
+            content=json.dumps({"error": "Task not found"}),
+            status_code=404,
+            media_type="application/json",
+        )
     except Exception:
-        return Response(content={"error": "Internal server error"}, status_code=500)
+        return Response(
+            content=json.dumps({"error": "Internal server error"}),
+            status_code=500,
+            media_type="application/json",
+        )
 
 
 @base_router.get(
@@ -392,12 +441,20 @@ async def list_agent_task_artifacts(
     """
     agent = request["agent"]
     try:
-        task_request = await agent.list_artifacts(task_id, page, page_size)
-        return task_request
+        artifacts = await agent.list_artifacts(task_id, page, page_size)
+        return Response(content=artifacts.json(), status_code=200)
     except NotFoundError:
-        return Response(content={"error": "Task not found"}, status_code=404)
+        return Response(
+            content=json.dumps({"error": "Task not found"}),
+            status_code=404,
+            media_type="application/json",
+        )
     except Exception:
-        return Response(content={"error": "Internal server error"}, status_code=500)
+        return Response(
+            content=json.dumps({"error": "Internal server error"}),
+            status_code=500,
+            media_type="application/json",
+        )
 
 
 @base_router.post(
@@ -458,12 +515,20 @@ async def upload_agent_task_artifacts(
             status_code=404,
         )
     try:
-        task_request = await agent.create_artifact(task_id, file, uri)
-        return task_request
+        artifact = await agent.create_artifact(task_id, file, uri)
+        return Response(content=artifact.json(), status_code=201)
     except NotFoundError:
-        return Response(content={"error": "Task not found"}, status_code=404)
+        return Response(
+            content=json.dumps({"error": "Task not found"}),
+            status_code=404,
+            media_type="application/json",
+        )
     except Exception:
-        return Response(content={"error": "Internal server error"}, status_code=500)
+        return Response(
+            content=json.dumps({"error": "Internal server error"}),
+            status_code=500,
+            media_type="application/json",
+        )
 
 
 @base_router.get(
@@ -493,9 +558,16 @@ async def download_agent_task_artifact(
     """
     agent = request["agent"]
     try:
-        task_request = await agent.get_artifact(task_id, artifact_id)
-        return task_request
+        return await agent.get_artifact(task_id, artifact_id)
     except NotFoundError:
-        return Response(content={"error": "Task not found"}, status_code=404)
+        return Response(
+            content=json.dumps({"error": "Artifact not found"}),
+            status_code=404,
+            media_type="application/json",
+        )
     except Exception:
-        return Response(content={"error": "Internal server error"}, status_code=500)
+        return Response(
+            content=json.dumps({"error": "Internal server error"}),
+            status_code=500,
+            media_type="application/json",
+        )
