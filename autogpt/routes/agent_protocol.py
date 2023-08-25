@@ -29,10 +29,13 @@ from fastapi import APIRouter, Query, Request, Response, UploadFile
 from fastapi.responses import FileResponse
 
 from autogpt.errors import *
+from autogpt.forge_log import CustomLogger
 from autogpt.schema import *
 from autogpt.tracing import tracing
 
 base_router = APIRouter()
+
+LOG = CustomLogger(__name__)
 
 
 @base_router.get("/", tags=["root"])
@@ -83,7 +86,7 @@ async def create_agent_task(request: Request, task_request: TaskRequestBody) -> 
 
     try:
         task_request = await agent.create_task(task_request)
-        return Response(content=task_request.json(), status_code=201)
+        return Response(content=task_request.json(), status_code=200)
     except NotFoundError:
         return Response(
             content=json.dumps({"error": "Task not found"}),
@@ -336,14 +339,15 @@ async def execute_agent_task_step(
     agent = request["agent"]
     try:
         step = await agent.create_and_execute_step(task_id, step)
-        return Response(content=step.json(), status_code=201)
+        return Response(content=step.json(), status_code=200)
     except NotFoundError:
         return Response(
-            content=json.dumps({"error": "Task not found"}),
+            content=json.dumps({"error": f"Task not found {task_id}"}),
             status_code=404,
             media_type="application/json",
         )
-    except Exception:
+    except Exception as e:
+        LOG.exception("Error whilst trying to execute a test")
         return Response(
             content=json.dumps({"error": "Internal server error"}),
             status_code=500,
@@ -516,7 +520,7 @@ async def upload_agent_task_artifacts(
         )
     try:
         artifact = await agent.create_artifact(task_id, file, uri)
-        return Response(content=artifact.json(), status_code=201)
+        return Response(content=artifact.json(), status_code=200)
     except NotFoundError:
         return Response(
             content=json.dumps({"error": "Task not found"}),
@@ -561,13 +565,21 @@ async def download_agent_task_artifact(
         return await agent.get_artifact(task_id, artifact_id)
     except NotFoundError:
         return Response(
-            content=json.dumps({"error": "Artifact not found"}),
+            content=json.dumps(
+                {
+                    "error": f"Artifact not found - task_id: {task_id}, artifact_id: {artifact_id}"
+                }
+            ),
             status_code=404,
             media_type="application/json",
         )
     except Exception:
         return Response(
-            content=json.dumps({"error": "Internal server error"}),
+            content=json.dumps(
+                {
+                    "error": f"Internal server error - task_id: {task_id}, artifact_id: {artifact_id}"
+                }
+            ),
             status_code=500,
             media_type="application/json",
         )

@@ -31,11 +31,13 @@ class Artifact(BaseModel):
         ...,
         description="The creation datetime of the task.",
         example="2023-01-01T00:00:00Z",
+        json_encoders={datetime: lambda v: v.isoformat()},
     )
     modified_at: datetime = Field(
         ...,
         description="The modification datetime of the task.",
         example="2023-01-01T00:00:00Z",
+        json_encoders={datetime: lambda v: v.isoformat()},
     )
     artifact_id: str = Field(
         ...,
@@ -84,11 +86,13 @@ class Task(TaskRequestBody):
         ...,
         description="The creation datetime of the task.",
         example="2023-01-01T00:00:00Z",
+        json_encoders={datetime: lambda v: v.isoformat()},
     )
     modified_at: datetime = Field(
         ...,
         description="The modification datetime of the task.",
         example="2023-01-01T00:00:00Z",
+        json_encoders={datetime: lambda v: v.isoformat()},
     )
     task_id: str = Field(
         ...,
@@ -126,11 +130,13 @@ class Step(StepRequestBody):
         ...,
         description="The creation datetime of the task.",
         example="2023-01-01T00:00:00Z",
+        json_encoders={datetime: lambda v: v.isoformat()},
     )
     modified_at: datetime = Field(
         ...,
         description="The modification datetime of the task.",
         example="2023-01-01T00:00:00Z",
+        json_encoders={datetime: lambda v: v.isoformat()},
     )
     task_id: str = Field(
         ...,
