@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, List, Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -19,11 +19,7 @@ class Pagination(BaseModel):
 
 
 class TaskInput(BaseModel):
-    __root__: Any = Field(
-        ...,
-        description="Input parameters for the task. Any value is allowed.",
-        example='{\n"debug": false,\n"mode": "benchmarks"\n}',
-    )
+    pass
 
 
 class Artifact(BaseModel):
@@ -57,19 +53,11 @@ class Artifact(BaseModel):
 
 
 class StepInput(BaseModel):
-    __root__: Any = Field(
-        ...,
-        description="Input parameters for the task step. Any value is allowed.",
-        example='{\n"file_to_refactor": "models.py"\n}',
-    )
+    pass
 
 
 class StepOutput(BaseModel):
-    __root__: Any = Field(
-        ...,
-        description="Output that the task step has produced. Any value is allowed.",
-        example='{\n"tokens": 7894,\n"estimated_cost": "0,24$"\n}',
-    )
+    pass
 
 
 class TaskRequestBody(BaseModel):
