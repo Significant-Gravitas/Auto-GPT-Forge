@@ -1,7 +1,7 @@
 import asyncio
 import os
 
-from fastapi import APIRouter, FastAPI, HTTPException, Response, UploadFile
+from fastapi import APIRouter, FastAPI, Response, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
@@ -50,7 +50,7 @@ class Agent:
         config.loglevel = "ERROR"
         config.bind = [f"0.0.0.0:{port}"]
 
-        LOG.info(f"Agent server starting on {config.bind}")
+        LOG.info(f"Agent server starting on http://{config.bind[0]}")
         asyncio.run(serve(app, config))
 
     async def create_task(self, task_request: TaskRequestBody) -> Task:
@@ -64,10 +64,9 @@ class Agent:
                 if task_request.additional_input
                 else None,
             )
-            LOG.info(task.json())
+            return task
         except Exception as e:
-            return Response(status_code=500, content=str(e))
-        return task
+            raise
 
     async def list_tasks(self, page: int = 1, pageSize: int = 10) -> TaskListResponse:
         """
@@ -76,22 +75,18 @@ class Agent:
         try:
             tasks, pagination = await self.db.list_tasks(page, pageSize)
             response = TaskListResponse(tasks=tasks, pagination=pagination)
-            return Response(content=response.json(), media_type="application/json")
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            raise
 
     async def get_task(self, task_id: str) -> Task:
         """
         Get a task by ID.
         """
-        if not task_id:
-            return Response(status_code=400, content="Task ID is required.")
-        if not isinstance(task_id, str):
-            return Response(status_code=400, content="Task ID must be a string.")
         try:
             task = await self.db.get_task(task_id)
         except Exception as e:
-            return Response(status_code=500, content=str(e))
+            raise
         return task
 
     async def list_steps(
@@ -100,16 +95,12 @@ class Agent:
         """
         List the IDs of all steps that the task has created.
         """
-        if not task_id:
-            return Response(status_code=400, content="Task ID is required.")
-        if not isinstance(task_id, str):
-            return Response(status_code=400, content="Task ID must be a string.")
         try:
             steps, pagination = await self.db.list_steps(task_id, page, pageSize)
             response = TaskStepsListResponse(steps=steps, pagination=pagination)
-            return Response(content=response.json(), media_type="application/json")
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            raise
 
     async def create_and_execute_step(
         self, task_id: str, step_request: StepRequestBody
@@ -162,19 +153,11 @@ class Agent:
         """
         Get a step by ID.
         """
-        if not task_id or not step_id:
-            return Response(
-                status_code=400, content="Task ID and step ID are required."
-            )
-        if not isinstance(task_id, str) or not isinstance(step_id, str):
-            return Response(
-                status_code=400, content="Task ID and step ID must be strings."
-            )
         try:
             step = await self.db.get_step(task_id, step_id)
+            return step
         except Exception as e:
-            return Response(status_code=500, content=str(e))
-        return step
+            raise
 
     async def list_artifacts(
         self, task_id: str, page: int = 1, pageSize: int = 10
@@ -182,18 +165,16 @@ class Agent:
         """
         List the artifacts that the task has created.
         """
-        if not task_id:
-            return Response(status_code=400, content="Task ID is required.")
-        if not isinstance(task_id, str):
-            return Response(status_code=400, content="Task ID must be a string.")
         try:
             artifacts, pagination = await self.db.list_artifacts(
                 task_id, page, pageSize
             )
+            response = TaskArtifactsListResponse(
+                artifacts=artifacts, pagination=pagination
+            )
+            return Response(content=response.json(), media_type="application/json")
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
-        response = TaskArtifactsListResponse(artifacts=artifacts, pagination=pagination)
-        return Response(content=response.json(), media_type="application/json")
+            raise
 
     async def create_artifact(
         self,
@@ -204,8 +185,6 @@ class Agent:
         """
         Create an artifact for the task.
         """
-        if not file and not uri:
-            return Response(status_code=400, content="No file or uri provided")
         data = None
         if not uri:
             file_name = file.filename or str(uuid4())
@@ -214,13 +193,13 @@ class Agent:
                 while contents := file.file.read(1024 * 1024):
                     data += contents
             except Exception as e:
-                return Response(status_code=500, content=str(e))
+                raise
         else:
             try:
                 data = await load_from_uri(uri, task_id)
                 file_name = uri.split("/")[-1]
             except Exception as e:
-                return Response(status_code=500, content=str(e))
+                raise
 
         file_path = os.path.join(task_id / file_name)
         self.write(file_path, data)
@@ -241,20 +220,16 @@ class Agent:
         """
         try:
             artifact = await self.db.get_artifact(task_id, artifact_id)
-        except Exception as e:
-            return Response(status_code=500, content=str(e))
-        try:
             retrieved_artifact = await self.load_from_uri(artifact.uri, artifact_id)
-        except Exception as e:
-            return Response(status_code=500, content=str(e))
-        path = artifact.file_name
-        try:
+
+            path = artifact.file_name
             with open(path, "wb") as f:
                 f.write(retrieved_artifact)
+
+            return FileResponse(
+                # Note: mimetype is guessed in the FileResponse constructor
+                path=path,
+                filename=artifact.file_name,
+            )
         except Exception as e:
-            return Response(status_code=500, content=str(e))
-        return FileResponse(
-            # Note: mimetype is guessed in the FileResponse constructor
-            path=path,
-            filename=artifact.file_name,
-        )
+            raise
