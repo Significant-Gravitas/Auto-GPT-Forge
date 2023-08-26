@@ -98,11 +98,6 @@ async def create_agent_task(request: Request, task_request: TaskRequestBody) -> 
                 "artifacts": [],
             }
     """
-    import pydevd_pycharm
-
-    pydevd_pycharm.settrace(
-        "localhost", port=9739, stdoutToServer=True, stderrToServer=True
-    )
     agent = request["agent"]
 
     try:
@@ -549,12 +544,6 @@ async def upload_agent_task_artifacts(
                 ...
             }
     """
-    import pydevd_pycharm
-
-    pydevd_pycharm.settrace(
-        "localhost", port=9739, stdoutToServer=True, stderrToServer=True
-    )
-
     agent = request["agent"]
     if file is None and uri is None:
         return Response(
