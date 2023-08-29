@@ -502,36 +502,25 @@ async def list_agent_task_artifacts(
 )
 @tracing("Uploading task artifact")
 async def upload_agent_task_artifacts(
-    request: Request,
-    task_id: str,
-    file: UploadFile | None = None,
-    uri: str | None = None,
+    request: Request, task_id: str, artifact_upload: ArtifactUpload
 ) -> Artifact:
     """
-    Uploads an artifact for a specific task using either a provided file or a URI.
-    At least one of the parameters, `file` or `uri`, must be specified. The `uri` can point to
-    cloud storage resources such as S3, GCS, etc., or to other resources like FTP or HTTP.
-
-    To check the supported URI types for the agent, use the `/agent/artifacts/uris` endpoint.
+    Uploads an artifact for a specific task using a provided file.
 
     Args:
         request (Request): FastAPI request object.
         task_id (str): The ID of the task.
-        file (UploadFile, optional): The uploaded file. Defaults to None.
-        uri (str, optional): The URI pointing to the resource. Defaults to None.
+        artifact_upload (ArtifactUpload): The uploaded file and its relative path.
 
     Returns:
         Artifact: Details of the uploaded artifact.
 
     Note:
-        Either `file` or `uri` must be provided. If both are provided, the behavior depends on
-        the agent's implementation. If neither is provided, the function will return an error.
+        The `file` must be provided. If it is not provided, the function will return an error.
     Example:
         Request:
             POST /agent/tasks/50da533e-3904-4401-8a07-c49adf88b5eb/artifacts
             File: <uploaded_file>
-            OR
-            URI: "s3://path/to/artifact"
 
         Response:
             {
@@ -540,28 +529,14 @@ async def upload_agent_task_artifacts(
             }
     """
     agent = request["agent"]
-    if file is None and uri is None:
+    if artifact_upload.file is None:
         return Response(
-            content=json.dumps({"error": "Either file or uri must be specified"}),
-            status_code=404,
-            media_type="application/json",
-        )
-    if file is not None and uri is not None:
-        return Response(
-            content=json.dumps(
-                {"error": "Both file and uri cannot be specified at the same time"}
-            ),
-            status_code=404,
-            media_type="application/json",
-        )
-    if uri is not None and not uri.startswith(("http://", "https://", "file://")):
-        return Response(
-            content=json.dumps({"error": "URI must start with http, https or file"}),
+            content=json.dumps({"error": "File must be specified"}),
             status_code=404,
             media_type="application/json",
         )
     try:
-        artifact = await agent.create_artifact(task_id, file, uri)
+        artifact = await agent.create_artifact(task_id, artifact_upload)
         return Response(
             content=artifact.json(),
             status_code=200,

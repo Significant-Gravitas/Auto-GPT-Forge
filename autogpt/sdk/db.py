@@ -72,7 +72,7 @@ class ArtifactModel(Base):
     step_id = Column(String, ForeignKey("steps.step_id"))
     agent_created = Column(Boolean, default=False)
     file_name = Column(String)
-    uri = Column(String)
+    relative_path = Column(String)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     modified_at = Column(
         DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow
@@ -123,7 +123,7 @@ def convert_to_artifact(artifact_model: ArtifactModel) -> Artifact:
         created_at=artifact_model.created_at,
         modified_at=artifact_model.modified_at,
         agent_created=artifact_model.agent_created,
-        uri=artifact_model.uri,
+        relative_path=artifact_model.relative_path,
     )
 
 
@@ -205,7 +205,7 @@ class AgentDB:
         self,
         task_id: str,
         file_name: str,
-        uri: str,
+        relative_path: str,
         agent_created: bool = False,
         step_id: str | None = None,
     ) -> Artifact:
@@ -215,12 +215,14 @@ class AgentDB:
             with self.Session() as session:
                 if (
                     existing_artifact := session.query(ArtifactModel)
-                    .filter_by(uri=uri)
+                    .filter_by(relative_path=relative_path)
                     .first()
                 ):
                     session.close()
                     if self.debug_enabled:
-                        LOG.debug(f"Artifact already exists with uri: {uri}")
+                        LOG.debug(
+                            f"Artifact already exists with relative_path: {relative_path}"
+                        )
                     return convert_to_artifact(existing_artifact)
 
                 new_artifact = ArtifactModel(
@@ -229,7 +231,7 @@ class AgentDB:
                     step_id=step_id,
                     agent_created=agent_created,
                     file_name=file_name,
-                    uri=uri,
+                    relative_path=relative_path,
                 )
                 session.add(new_artifact)
                 session.commit()

@@ -1,5 +1,6 @@
 import asyncio
 import os
+from uuid import uuid4
 
 from fastapi import APIRouter, FastAPI, Response, UploadFile
 from fastapi.responses import FileResponse
@@ -15,7 +16,7 @@ from .routes.agent_protocol import base_router
 from .schema import *
 from .tracing import setup_tracing
 from .utils import run
-from .workspace import Workspace, load_from_uri
+from .workspace import Workspace
 
 LOG = CustomLogger(__name__)
 
@@ -180,36 +181,32 @@ class Agent:
     async def create_artifact(
         self,
         task_id: str,
-        file: UploadFile | None = None,
-        uri: str | None = None,
+        artifact_upload: ArtifactUpload,
     ) -> Artifact:
         """
         Create an artifact for the task.
         """
         data = None
-        if not uri:
-            file_name = file.filename or str(uuid4())
-            try:
-                data = b""
-                while contents := file.file.read(1024 * 1024):
-                    data += contents
-            except Exception as e:
-                raise
+        file_name = artifact_upload.file.filename or str(uuid4())
+        try:
+            data = b""
+            while contents := artifact_upload.file.file.read(1024 * 1024):
+                data += contents
+        except Exception as e:
+            raise
+        # Check if relative path ends with filename
+        if artifact_upload.relative_path.endswith(file_name):
+            file_path = os.path.join(task_id, artifact_upload.relative_path)
         else:
-            try:
-                data = await load_from_uri(uri, task_id)
-                file_name = uri.split("/")[-1]
-            except Exception as e:
-                raise
+            file_path = os.path.join(task_id, artifact_upload.relative_path, file_name)
 
-        file_path = os.path.join(task_id / file_name)
         self.write(file_path, data)
         self.db.save_artifact(task_id, artifact)
 
-        artifact = await self.create_artifact(
+        artifact = await self.db.create_artifact(
             task_id=task_id,
             file_name=file_name,
-            uri=f"file://{file_path}",
+            relative_path=artifact_upload.relative_path,
             agent_created=False,
         )
 

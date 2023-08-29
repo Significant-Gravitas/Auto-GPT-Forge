@@ -54,7 +54,6 @@ async def test_task_schema():
             Artifact(
                 artifact_id="b225e278-8b4c-4f99-a696-8facf19f0e56",
                 agent_created=True,
-                uri="file:///path/to/artifact",
                 file_name="main.py",
                 relative_path="python/code/",
                 created_at=now,
@@ -88,7 +87,6 @@ async def test_step_schema():
                 created_at=now,
                 modified_at=now,
                 agent_created=True,
-                uri="file:///path/to/artifact",
             )
         ],
         is_last=False,
@@ -119,7 +117,7 @@ async def test_convert_to_task():
                 artifact_id="b225e278-8b4c-4f99-a696-8facf19f0e56",
                 created_at=now,
                 modified_at=now,
-                uri="file:///path/to/main.py",
+                relative_path="file:///path/to/main.py",
                 agent_created=True,
             )
         ],
@@ -147,7 +145,7 @@ async def test_convert_to_step():
                 artifact_id="b225e278-8b4c-4f99-a696-8facf19f0e56",
                 created_at=now,
                 modified_at=now,
-                uri="file:///path/to/main.py",
+                relative_path="file:///path/to/main.py",
                 agent_created=True,
             )
         ],
@@ -170,12 +168,12 @@ async def test_convert_to_artifact():
         artifact_id="b225e278-8b4c-4f99-a696-8facf19f0e56",
         created_at=now,
         modified_at=now,
-        uri="file:///path/to/main.py",
+        relative_path="file:///path/to/main.py",
         agent_created=True,
     )
     artifact = convert_to_artifact(artifact_model)
     assert artifact.artifact_id == "b225e278-8b4c-4f99-a696-8facf19f0e56"
-    assert artifact.uri == "file:///path/to/main.py"
+    assert artifact.relative_path == "file:///path/to/main.py"
     assert artifact.agent_created == True
 
 
@@ -259,7 +257,7 @@ async def test_get_artifact():
     artifact = await db.create_artifact(
         task_id=task.task_id,
         file_name="test_get_artifact_sample_file.txt",
-        uri="file:///path/to/test_get_artifact_sample_file.txt",
+        relative_path="file:///path/to/test_get_artifact_sample_file.txt",
         agent_created=True,
         step_id=step.step_id,
     )
@@ -269,7 +267,10 @@ async def test_get_artifact():
 
     # Then: The fetched artifact matches the original
     assert fetched_artifact.artifact_id == artifact.artifact_id
-    assert fetched_artifact.uri == "file:///path/to/test_get_artifact_sample_file.txt"
+    assert (
+        fetched_artifact.relative_path
+        == "file:///path/to/test_get_artifact_sample_file.txt"
+    )
 
     os.remove(db_name.split("///")[1])
 
