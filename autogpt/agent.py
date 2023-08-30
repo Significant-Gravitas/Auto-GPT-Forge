@@ -88,4 +88,8 @@ class AutoGPTAgent(Agent):
         multiple steps. Returning a request to continue in the step output, the user can then decide
         if they want the agent to continue or not.
         """
+
+        
+        task = await self.db.get_task(task_id)
+
         raise NotImplementedError

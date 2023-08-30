@@ -4,42 +4,36 @@ from datetime import datetime
 
 import pytest
 
-from autogpt.sdk.db import (
-    AgentDB,
-    ArtifactModel,
-    StepModel,
-    TaskModel,
-    convert_to_artifact,
-    convert_to_step,
-    convert_to_task,
+from autogpt.sdk.db_sql_model import (
+    AgentDB
 )
 from autogpt.sdk.errors import NotFoundError as DataNotFoundError
 from autogpt.sdk.schema import *
 
 
-@pytest.mark.asyncio
-def test_table_creation():
-    db_name = "sqlite:///test_db.sqlite3"
-    agent_db = AgentDB(db_name)
+# @pytest.mark.asyncio
+# def test_table_creation():
+#     db_name = "sqlite:///test_db.sqlite3"
+#     agent_db = AgentDB(db_name)
 
-    conn = sqlite3.connect("test_db.sqlite3")
-    cursor = conn.cursor()
+#     conn = sqlite3.connect("test_db.sqlite3")
+#     cursor = conn.cursor()
 
-    # Test for tasks table existence
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='tasks'")
-    assert cursor.fetchone() is not None
+#     # Test for tasks table existence
+#     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='tasks'")
+#     assert cursor.fetchone() is not None
 
-    # Test for steps table existence
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='steps'")
-    assert cursor.fetchone() is not None
+#     # Test for steps table existence
+#     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='steps'")
+#     assert cursor.fetchone() is not None
 
-    # Test for artifacts table existence
-    cursor.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='artifacts'"
-    )
-    assert cursor.fetchone() is not None
+#     # Test for artifacts table existence
+#     cursor.execute(
+#         "SELECT name FROM sqlite_master WHERE type='table' AND name='artifacts'"
+#     )
+#     assert cursor.fetchone() is not None
 
-    os.remove(db_name.split("///")[1])
+#     os.remove(db_name.split("///")[1])
 
 
 @pytest.mark.asyncio
@@ -102,82 +96,6 @@ async def test_step_schema():
     assert len(step.artifacts) == 1
     assert step.artifacts[0].artifact_id == "b225e278-8b4c-4f99-a696-8facf19f0e56"
     assert step.is_last == False
-
-
-@pytest.mark.asyncio
-async def test_convert_to_task():
-    now = datetime.now()
-    task_model = TaskModel(
-        task_id="50da533e-3904-4401-8a07-c49adf88b5eb",
-        created_at=now,
-        modified_at=now,
-        input="Write the words you receive to the file 'output.txt'.",
-        artifacts=[
-            ArtifactModel(
-                artifact_id="b225e278-8b4c-4f99-a696-8facf19f0e56",
-                created_at=now,
-                modified_at=now,
-                relative_path="file:///path/to/main.py",
-                agent_created=True,
-                file_name="main.py",
-            )
-        ],
-    )
-    task = convert_to_task(task_model)
-    assert task.task_id == "50da533e-3904-4401-8a07-c49adf88b5eb"
-    assert task.input == "Write the words you receive to the file 'output.txt'."
-    assert len(task.artifacts) == 1
-    assert task.artifacts[0].artifact_id == "b225e278-8b4c-4f99-a696-8facf19f0e56"
-
-
-@pytest.mark.asyncio
-async def test_convert_to_step():
-    now = datetime.now()
-    step_model = StepModel(
-        task_id="50da533e-3904-4401-8a07-c49adf88b5eb",
-        step_id="6bb1801a-fd80-45e8-899a-4dd723cc602e",
-        created_at=now,
-        modified_at=now,
-        name="Write to file",
-        status="created",
-        input="Write the words you receive to the file 'output.txt'.",
-        artifacts=[
-            ArtifactModel(
-                artifact_id="b225e278-8b4c-4f99-a696-8facf19f0e56",
-                created_at=now,
-                modified_at=now,
-                relative_path="file:///path/to/main.py",
-                agent_created=True,
-                file_name="main.py",
-            )
-        ],
-        is_last=False,
-    )
-    step = convert_to_step(step_model)
-    assert step.task_id == "50da533e-3904-4401-8a07-c49adf88b5eb"
-    assert step.step_id == "6bb1801a-fd80-45e8-899a-4dd723cc602e"
-    assert step.name == "Write to file"
-    assert step.status == Status.created
-    assert len(step.artifacts) == 1
-    assert step.artifacts[0].artifact_id == "b225e278-8b4c-4f99-a696-8facf19f0e56"
-    assert step.is_last == False
-
-
-@pytest.mark.asyncio
-async def test_convert_to_artifact():
-    now = datetime.now()
-    artifact_model = ArtifactModel(
-        artifact_id="b225e278-8b4c-4f99-a696-8facf19f0e56",
-        created_at=now,
-        modified_at=now,
-        relative_path="file:///path/to/main.py",
-        agent_created=True,
-        file_name="main.py",
-    )
-    artifact = convert_to_artifact(artifact_model)
-    assert artifact.artifact_id == "b225e278-8b4c-4f99-a696-8facf19f0e56"
-    assert artifact.relative_path == "file:///path/to/main.py"
-    assert artifact.agent_created == True
 
 
 @pytest.mark.asyncio

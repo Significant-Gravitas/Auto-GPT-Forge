@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from pydantic import BaseModel, Field
 
@@ -25,10 +25,6 @@ class Pagination(BaseModel):
     total_pages: int = Field(..., description="Total number of pages.", example=97)
     current_page: int = Field(..., description="Current_page page number.", example=1)
     page_size: int = Field(..., description="Number of items per page.", example=25)
-
-
-class TaskInput(BaseModel):
-    pass
 
 
 class Artifact(BaseModel):
@@ -66,14 +62,6 @@ class Artifact(BaseModel):
     )
 
 
-class StepInput(BaseModel):
-    pass
-
-
-class StepOutput(BaseModel):
-    pass
-
-
 class TaskRequestBody(BaseModel):
     input: str = Field(
         ...,
@@ -81,7 +69,7 @@ class TaskRequestBody(BaseModel):
         description="Input prompt for the task.",
         example="Write the words you receive to the file 'output.txt'.",
     )
-    additional_input: Optional[TaskInput] = {}
+    additional_input: Optional[Dict[str, str]] = {}
 
 
 class Task(TaskRequestBody):
@@ -122,7 +110,7 @@ class StepRequestBody(BaseModel):
         description="Input prompt for the step.",
         example="Washington",
     )
-    additional_input: Optional[StepInput] = {}
+    additional_input: Optional[Dict[str, str]] = {}
 
 
 class Status(Enum):
@@ -165,7 +153,7 @@ class Step(StepRequestBody):
         description="Output of the task step.",
         example="I am going to use the write_to_file command and write Washington to a file called output.txt <write_to_file('output.txt', 'Washington')",
     )
-    additional_output: Optional[StepOutput] = {}
+    additional_output: Optional[Dict[str, str]] = {}
     artifacts: Optional[List[Artifact]] = Field(
         [], description="A list of artifacts that the step has produced."
     )

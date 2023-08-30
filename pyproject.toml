@@ -12,10 +12,10 @@ python-dotenv = "^1.0.0"
 openai = "^0.27.8"
 helicone = "^1.0.6"
 tenacity = "^8.2.2"
-sqlalchemy = "^2.0.19"
 google-cloud-storage = "^2.10.0"
 aiohttp = "^3.8.5"
 colorlog = "^6.7.0"
+sqlmodel = "^0.0.8"
 
 
 [tool.poetry.group.dev.dependencies]

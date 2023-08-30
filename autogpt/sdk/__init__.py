@@ -22,3 +22,4 @@ from .schema import (
     TaskStepsListResponse,
 )
 from .workspace import LocalWorkspace, Workspace
+from .errors import NotFoundError

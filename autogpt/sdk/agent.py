@@ -8,7 +8,7 @@ from hypercorn.asyncio import serve
 from hypercorn.config import Config
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from .db import AgentDB
+from .db_sql_model import AgentDB
 from .errors import NotFoundError
 from .forge_log import ForgeLogger
 from .middlewares import AgentMiddleware
