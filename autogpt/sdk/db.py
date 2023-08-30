@@ -23,7 +23,7 @@ from sqlalchemy.orm import DeclarativeBase, joinedload, relationship, sessionmak
 
 from .errors import NotFoundError
 from .forge_log import CustomLogger
-from .schema import Artifact, Pagination, Status, Step, Task, TaskInput
+from .schema import Artifact, Pagination, Status, Step, StepRequestBody, Task, TaskInput
 
 LOG = CustomLogger(__name__)
 
@@ -124,6 +124,7 @@ def convert_to_artifact(artifact_model: ArtifactModel) -> Artifact:
         modified_at=artifact_model.modified_at,
         agent_created=artifact_model.agent_created,
         relative_path=artifact_model.relative_path,
+        file_name=artifact_model.file_name,
     )
 
 
@@ -149,7 +150,9 @@ class AgentDB:
                 new_task = TaskModel(
                     task_id=str(uuid.uuid4()),
                     input=input,
-                    additional_input=additional_input,
+                    additional_input=additional_input.json()
+                    if additional_input
+                    else {},
                 )
                 session.add(new_task)
                 session.commit()
@@ -169,7 +172,7 @@ class AgentDB:
     async def create_step(
         self,
         task_id: str,
-        input: str,
+        input: StepRequestBody,
         is_last: bool = False,
         additional_input: Optional[Dict[str, Any]] = {},
     ) -> Step:
@@ -180,7 +183,7 @@ class AgentDB:
                 new_step = StepModel(
                     task_id=task_id,
                     step_id=str(uuid.uuid4()),
-                    name=input.name,
+                    name=input.input,
                     input=input.input,
                     status="created",
                     is_last=is_last,

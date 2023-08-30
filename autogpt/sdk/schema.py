@@ -60,6 +60,11 @@ class Artifact(BaseModel):
         description="Relative path of the artifact in the agents workspace.",
         example="/my_folder/my_other_folder/",
     )
+    file_name: str = Field(
+        ...,
+        description="Filename of the artifact.",
+        example="main.py",
+    )
 
 
 class StepInput(BaseModel):
